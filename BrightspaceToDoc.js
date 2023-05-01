@@ -293,26 +293,6 @@ const processHtmlFiles = async (
   </html>
     `;
 
-  // (async () => {
-  //   try {
-  //     const fileBuffer = await htmlDocx(resultHtml, null, {
-  //       table: { row: { cantSplit: true } },
-  //       footer: true,
-  //       pageNumber: true,
-  //     });
-
-  //     fs.writeFile(docxFileName, fileBuffer, (error) => {
-  //       if (error) {
-  //         console.log("Docx file creation failed");
-  //         return;
-  //       }
-  //       console.log("Docx file created successfully");
-  //     });
-  //   } catch (error) {
-  //     console.error("Error converting HTML to DOCX:", error);
-  //   }
-  // })();
-
   if (fileType === "html") {
     fs.writeFile(docxFileName.replace(".docx", ".html"), resultHtml, (err) => {
       if (err) {
