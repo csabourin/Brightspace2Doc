@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<manifest identifier="D2L_12175" xmlns:d2l_2p0="http://desire2learn.com/xsd/d2lcp_v2p0" xmlns:scorm_1p2="http://www.adlnet.org/xsd/adlcp_rootv1p2" xmlns:imsmd="http://www.imsglobal.org/xsd/imsmd_rootv1p2p1" xmlns="http://www.imsglobal.org/xsd/imscp_v1p1">
+    <metadata>
+        <imsmd:lom>
+            <imsmd:general>
+                <imsmd:title>
+                    <imsmd:langstring xml:lang="en-ca">AI and the Global Landscape (DEV)</imsmd:langstring>
+                </imsmd:title>
+                <imsmd:keyword>
+                    <imsmd:langstring xml:lang="en-ca">DDN248-DEV-EN</imsmd:langstring>
+                </imsmd:keyword>
+                <imsmd:language>en-ca</imsmd:language>
+            </imsmd:general>
+        </imsmd:lom>
+    </metadata>
+    <organizations default="d2l_orgs">
+        <organization identifier="d2l_org">
+            <item identifier="70403" identifierref="RES_CONTENT_70403" d2l_2p0:id="1" description="&lt;p&gt;&lt;span style=&quot;font-size: 12.0pt; line-height: 107%; font-family: Arial, sans-serif; color: #333333; background: white;&quot;&gt;As Public Servants, we have a duty to protect Public trust: The use of AI has the potential to affect the lives of Canadian in significant ways. &lt;span style=&quot;font-size: 12.0pt; line-height: 107%; font-family: Arial, sans-serif; color: #333333; background: white;&quot;&gt;This self-paced course will take you on a journey through AI global governance and the most important AI guidelines and decisions.&amp;nbsp;&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;" completion_type="2">
+                <title>Module 1: Introduction</title>
+                <item identifier="70404" identifierref="RES_CONTENT_70404" d2l_2p0:id="2" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36605" description="" completion_type="2">
+                    <title>1.1 – Welcome to this course</title>
+                </item>
+                <item identifier="70405" identifierref="RES_CONTENT_70405" d2l_2p0:id="3" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36606" description="" completion_type="2">
+                    <title>1.2 - What you can expect from this course</title>
+                </item>
+                <item identifier="70408" identifierref="RES_CONTENT_70408" d2l_2p0:id="4" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36609" description="" completion_type="2">
+                    <title>1.3 – Why is this important?</title>
+                </item>
+                <item identifier="70409" identifierref="RES_CONTENT_70409" d2l_2p0:id="5" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36610" description="" completion_type="2">
+                    <title>1.4 – How the world is responding</title>
+                </item>
+            </item>
+            <item identifier="70410" identifierref="RES_CONTENT_70410" d2l_2p0:id="6" description="&lt;p&gt;&lt;span style=&quot;font-size: 12.0pt; line-height: 107%; font-family: Arial, sans-serif; color: #333333; background: white;&quot;&gt;AI governance implies there should be a legal framework for ensuring that AI technologies are well researched and developed with the goal of helping humanity.&lt;br&gt;&lt;br&gt;&lt;/span&gt;&lt;/p&gt;" completion_type="2">
+                <title>Module 2: Governance</title>
+                <item identifier="70980" identifierref="RES_CONTENT_70980" d2l_2p0:id="7" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36678" description="" completion_type="2">
+                    <title>2.1 What is governance</title>
+                </item>
+                <item identifier="70991" identifierref="RES_CONTENT_70991" d2l_2p0:id="8" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36771" description="" completion_type="2">
+                    <title>2.2 What does global governance mean</title>
+                </item>
+                <item identifier="70992" identifierref="RES_CONTENT_70992" d2l_2p0:id="9" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36772" description="" completion_type="2">
+                    <title>2.3 Why should we need global governance when it comes to AI</title>
+                </item>
+            </item>
+            <item identifier="71067" identifierref="RES_CONTENT_71067" d2l_2p0:id="10" description="&lt;p&gt;While AI legislation is still in its early stages, there is growing recognition of the need for such legislation to ensure that AI is developed and used in a responsible and ethical manner.&amp;nbsp;&lt;/p&gt;&#xD;&#xA;&lt;p&gt;These efforts have happened both in the public sector and on National and international organizations who have responded to the concerns posed by the twin objective of promoting the uptake of AI and of addressing the risks associated with certain uses of such technology.&lt;/p&gt;&#xD;&#xA;&lt;p&gt;Public Servants should stay informed about the EU AI Act:&amp;nbsp;&lt;br&gt;The EU AI Act is a proposed regulation that aims to set standards for the development and use of artificial intelligence within the European Union. It includes guidelines on ethical and transparent AI, as well as requirements for high-risk AI systems.&lt;/p&gt;" completion_type="2">
+                <title>Module 3: AI Governance in the world today</title>
+                <item identifier="71070" identifierref="RES_CONTENT_71070" d2l_2p0:id="11" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36775" description="" completion_type="2">
+                    <title>3.1 – The AI Act</title>
+                </item>
+                <item identifier="71072" identifierref="RES_CONTENT_71072" d2l_2p0:id="12" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36777" description="" completion_type="2">
+                    <title>3.2 The AI Act and how it could impact the global standards</title>
+                </item>
+                <item identifier="71073" identifierref="RES_CONTENT_71073" d2l_2p0:id="13" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36778" description="" completion_type="2">
+                    <title>3.3 Levels of scrutiny on the potential risk of the AI system</title>
+                </item>
+                <item identifier="71074" identifierref="RES_CONTENT_71074" d2l_2p0:id="14" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-36779" description="" completion_type="2">
+                    <title>3.4 Conclusion</title>
+                </item>
+            </item>
+            <item identifier="71075" identifierref="RES_CONTENT_71075" d2l_2p0:id="15" description="&lt;p&gt;This learning objectives for this training were:&lt;/p&gt;&#xD;&#xA;&lt;ul style=&quot;margin-bottom: 0in; margin-top: 0px;&quot;&gt;&#xD;&#xA;&lt;li style=&quot;margin: 0in 0in 0in 0px; line-height: 107%; font-size: 11pt; font-family: Calibri, sans-serif;&quot;&gt;&lt;span style=&quot;font-size: 12.0pt; line-height: 107%; font-family: Arial, sans-serif; color: black; background: white;&quot;&gt;Uncover what governance means in the world of AI. &lt;/span&gt;&lt;/li&gt;&#xD;&#xA;&lt;li style=&quot;margin: 0in 0in 0in 0px; line-height: 107%; font-size: 11pt; font-family: Calibri, sans-serif;&quot;&gt;&lt;span style=&quot;font-size: 12.0pt; line-height: 107%; font-family: Arial, sans-serif; color: black; background: white;&quot;&gt;Have a look at why global governance is essential when it comes to AI. &lt;/span&gt;&lt;/li&gt;&#xD;&#xA;&lt;li style=&quot;margin: 0in 0in 0in 0px; line-height: 107%; font-size: 11pt; font-family: Calibri, sans-serif;&quot;&gt;&lt;span style=&quot;font-size: 12.0pt; line-height: 107%; font-family: Arial, sans-serif; color: black; background: white;&quot;&gt;Take a journey through the most important AI guidelines and what the next steps will be. &lt;/span&gt;&lt;/li&gt;&#xD;&#xA;&lt;li style=&quot;margin: 0in 0in 8pt 0px; line-height: 107%; font-size: 11pt; font-family: Calibri, sans-serif;&quot;&gt;&lt;span style=&quot;font-size: 12.0pt; line-height: 107%; font-family: Arial, sans-serif; color: black; background: white;&quot;&gt;Visit the AI Act website and subscribe to the “Up to date developments and analyses” newsletter.&lt;/span&gt;&lt;/li&gt;&#xD;&#xA;&lt;/ul&gt;&#xD;&#xA;&lt;p&gt;Let's review the content with a Knowledge check. In the following pages you will answer 3 multiple choice questions.&lt;/p&gt;" completion_type="2">
+                <title>Module 4: Knowledge check</title>
+            </item>
+        </organization>
+    </organizations>
+    <resources>
+        <resource identifier="RES_CONTENT_70403" type="webcontent" d2l_2p0:material_type="contentmodule" d2l_2p0:link_target="" href="" title="" />
+        <resource identifier="RES_CONTENT_70404" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="1.1 – Welcome to this course.html" title="" />
+        <resource identifier="RES_CONTENT_70405" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="1.2 - What you can expect from this course .html" title="" />
+        <resource identifier="RES_CONTENT_70408" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="1.3 – Why is this important .html" title="" />
+        <resource identifier="RES_CONTENT_70409" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="1.4 – How the world is responding .html" title="" />
+        <resource identifier="RES_CONTENT_70410" type="webcontent" d2l_2p0:material_type="contentmodule" d2l_2p0:link_target="" href="" title="" />
+        <resource identifier="RES_CONTENT_70980" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="What is governance.html" title="" />
+        <resource identifier="RES_CONTENT_70991" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="What does global governance mean.html" title="" />
+        <resource identifier="RES_CONTENT_70992" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="2.3 Why should we need global governance when it comes to AI" title="" />
+        <resource identifier="RES_CONTENT_71067" type="webcontent" d2l_2p0:material_type="contentmodule" d2l_2p0:link_target="" href="" title="" />
+        <resource identifier="RES_CONTENT_71070" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="3.1 – The AI Act.html" title="" />
+        <resource identifier="RES_CONTENT_71072" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="3.2 The AI Act and how it could impact the global standards.html" title="" />
+        <resource identifier="RES_CONTENT_71073" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="3.3 Levels of scrutiny on the potential risk of the AI system.html" title="" />
+        <resource identifier="RES_CONTENT_71074" type="webcontent" d2l_2p0:material_type="content" d2l_2p0:link_target="" href="3.4 Conclusion.html" title="" />
+        <resource identifier="RES_CONTENT_71075" type="webcontent" d2l_2p0:material_type="contentmodule" d2l_2p0:link_target="" href="" title="" />
+        <resource identifier="res_syllabus" type="webcontent" d2l_2p0:material_type="d2lsyllabus" d2l_2p0:link_target="" href="syllabus_d2l.xml" title="" />
+        <resource identifier="res_courseimage" type="webcontent" d2l_2p0:material_type="d2lcourseimage" d2l_2p0:link_target="" href="courseimage_d2l.xml" title="" />
+    </resources>
+</manifest>
