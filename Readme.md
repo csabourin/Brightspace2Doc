@@ -32,6 +32,14 @@ npm install
 To run the script, execute the following command in your terminal:
 
 ```
+setup.cmd
+```
+it will the install all dependencies if they are not present and close. Run it again and a window will appear.
+Drag/drop the zip package in the window and press enter.
+
+### or
+
+```
 node index.js <path-to-zip-file>
 ```
 
