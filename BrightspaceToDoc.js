@@ -139,12 +139,10 @@ const formatQuizDataAsHtml = (quizData) => {
 		answerChoices.forEach((choice, index) => {
 			quizHtml += `<li>${choice}</li>`;
 		});
-
-		quizHtml += `</ol><p>Correct Answer: ${correctAnswer}</p></li>`;
+		quizHtml += language=="en"?`</ol><p>Correct Answer: ${correctAnswer}</p></li>`:`</ol><p>Bonne réponse: ${correctAnswer}</p></li>`;
 	});
 
 	quizHtml += "</ol>";
-
 	return quizHtml;
 };
 
@@ -200,28 +198,37 @@ const processHtmlFiles = async (
 		return $.html();
 	};
 
-	for (const [title, resourceData] of Object.entries(itemResourceMap)) {
-		const { href, description } = resourceData;
-		const htmlFilePath = path.join(tempDir, href);
-		const fileContent = href ? await readFile(htmlFilePath) : "";
-		let $ = href ? cheerio.load(fileContent) : null;
-		let bodyContent = $ ? $("body").html() : "";
-
-		const decodedDescription = description ? decodeHtml(description) : "";
-		const titleWithDescription = description
-			? `<h1>${title}</h1>\n${decodedDescription}\n`
-			: "";
-
-		if ($) {
-			bodyContent = await embedImages($, htmlFilePath);
-			const headContent = $("head").html();
-
-			if (!firstHeadTag) {
-				firstHeadTag = headContent;
-			}
-		}
-		combinedHtmlContent += `${titleWithDescription}${bodyContent}\n`;
-	}
+  for (const [title, resourceData] of Object.entries(itemResourceMap)) {
+    const { href, description } = resourceData;
+  
+    // Check if the current title exists in quizHtmlContentMap
+    const quizContent = quizHtmlContentMap[title];
+  
+    const htmlFilePath = path.join(tempDir, href);
+    const fileContent = href ? await readFile(htmlFilePath) : "";
+    let $ = href ? cheerio.load(fileContent) : null;
+    let bodyContent = $ ? $("body").html() : "";
+  
+    // If quizContent exists, use it as the bodyContent
+    if (quizContent) {
+      bodyContent = quizContent;
+    }
+  
+    const decodedDescription = description ? decodeHtml(description) : "";
+    const titleWithDescription = description
+      ? `<h1>${title}</h1>\n${decodedDescription}\n`
+      : "";
+  
+    if ($) {
+      bodyContent = await embedImages($, htmlFilePath);
+      const headContent = $("head").html();
+  
+      if (!firstHeadTag) {
+        firstHeadTag = headContent;
+      }
+    }
+    combinedHtmlContent += `${titleWithDescription}${bodyContent}\n`;
+  }
 
 	const $ = cheerio.load(combinedHtmlContent);
 
@@ -349,66 +356,80 @@ const parseItems = (itemList, itemResourceMap, resourceMap) => {
 	});
 };
 
-const parseQuizXml = (xmlData) => {
-	const quizData = [];
+async function parseQuizXml(xmlString) {
+  let parsedData;
+  let quizData= [];
 
-	if (
-		!xmlData.questestinterop ||
-		!xmlData.questestinterop.assessment ||
-		!xmlData.questestinterop.assessment[0].section
-	) {
-		console.log("No quiz data found in the XML.");
-		return quizData;
-	}
+  try {
+    parsedData = await xml2js.parseStringPromise(xmlString);
+  } catch (error) {
+    console.error('Error parsing XML:', error);
+    return;
+  }
 
-	const questions = xmlData.questestinterop.assessment[0].section[0].item;
+  if (
+    !parsedData ||
+    !parsedData.questestinterop ||
+    !parsedData.questestinterop.assessment ||
+    !parsedData.questestinterop.assessment[0] ||
+    !parsedData.questestinterop.assessment[0].section ||
+    !parsedData.questestinterop.assessment[0].section[0] ||
+    !parsedData.questestinterop.assessment[0].section[0].item
+  ) {
+    console.error('Invalid XML data format or missing required elements');
+    return;
+  }
 
-	if (!questions) {
-		console.log("No questions found in the XML.");
-		return quizData;
-	}
+  const questions = parsedData.questestinterop.assessment[0].section[0].item;
+ 
+  if (!questions) {
+      console.log("No questions found in the XML.");
+      return quizData;
+  }
 
-	questions.forEach((question) => {
-		if (!question.presentation || !question.presentation[0].flow) {
-			return;
-		}
+  questions.forEach((question) => {
+      if (!question.presentation || !question.presentation[0].flow) {
+          return;
+      }
 
-		const questionText =
-			question.presentation[0].flow[0].material[0].mattext[0]._;
+      const questionText =
+          question.presentation[0].flow[0].material[0].mattext[0]._;
 
-		const answerOptions = question.presentation[0].flow[0].response_grp
-			? question.presentation[0].flow[0].response_grp[0].render_choice[0]
-					.flow_label
-			: question.presentation[0].flow[0].response_lid[0].render_choice[0]
-					.flow_label;
+      const answerOptions = question.presentation[0].flow[0].response_lid[0].render_choice[0].flow_label;
 
-		const answerChoices = answerOptions.map(
-			(answerOption) =>
-				answerOption.response_label[0].flow_mat[0].material[0].mattext[0]._
-		);
+      const answerChoices = answerOptions.map(
+          (answerOption) =>
+              answerOption.response_label[0].flow_mat[0].material[0].mattext[0]._
+      );
 
-		const correctAnswerIdent = question.resprocessing[0].respcondition.find(
-			(condition) => parseFloat(condition.setvar[0]._)
-		).conditionvar[0].varequal[0]._;
-		const correctAnswerIndex = answerOptions.findIndex(
-			(answerOption) =>
-				answerOption.response_label[0].$.ident === correctAnswerIdent
-		);
-		const correctAnswer = String.fromCharCode(65 + correctAnswerIndex);
+      const feedbacks = question.itemfeedback.map(
+          (feedback) => feedback.material[0].mattext[0]._
+      );
 
-		quizData.push({
-			question: questionText,
-			answerChoices: answerChoices,
-			correctAnswer: correctAnswer,
-		});
-	});
+      const correctAnswerIdent = question.resprocessing[0].respcondition.find(
+          (condition) => parseFloat(condition.setvar[0]._)
+      ).conditionvar[0].varequal[0]._;
+      const correctAnswerIndex = answerOptions.findIndex(
+          (answerOption) =>
+              answerOption.response_label[0].$.ident === correctAnswerIdent
+      );
+      const correctAnswer = String.fromCharCode(65 + correctAnswerIndex);
 
-	return quizData;
+      quizData.push({
+          question: questionText,
+          answerChoices: answerChoices,
+          correctAnswer: correctAnswer,
+          feedbacks: feedbacks,
+      });
+  });
+
+  return quizData;
 };
+
 
 const parseQuizXmlFile = async (quizFilePath) => {
 	const quizContent = await readFile(quizFilePath);
-	console.log(quizFilePath);
+	// console.log(quizFilePath);
 	const quizData = await parseQuizXml(quizContent);
 	return quizData;
 };
@@ -474,7 +495,7 @@ const processImsManifest = async (imsManifestPath) => {
 		}
 	});
 
-	parseItems(organization.item, itemResourceMap, resourceMap);
+	parseItems(organization.item, itemResourceMap, resourceMap,quizHtmlContentMap);
 
 	const titleElement =
 		metadata["imsmd:title"]?.[0]?.["imsmd:langstring"]?.[0]._;
