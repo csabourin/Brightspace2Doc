@@ -40,7 +40,7 @@ const urlToBase64 = async (url) => {
   const isRemote = url.startsWith("http") || url.startsWith("https");
 
   if (isRemote) {
-    console.log("Fetching remote image:", url);
+    // console.log("Fetching remote image:", url);
     const { default: fetch } = await import("node-fetch");
     const response = await fetch(url);
     const arrayBuffer = await response.arrayBuffer();
@@ -74,7 +74,7 @@ const urlToBase64 = async (url) => {
           const base64 = data.toString().startsWith("data:")
             ? data.toString()
             : data.toString("base64");
-          console.log("base64: " + absoluteSrc);
+          // console.log("base64: " + absoluteSrc);
           const final = base64.startsWith("data:")
             ? base64
             : "data:image/png;base64," + base64;
@@ -182,7 +182,7 @@ const processHtmlFiles = async (
         }
         const absoluteSrc = path.resolve(directoryPath, src);
         src = decodeURIComponent(absoluteSrc);
-        console.log("src: " + src);
+        // console.log("src: " + src);
       }
 
       try {
@@ -253,7 +253,7 @@ const processHtmlFiles = async (
           });
         imagePromises.push(promise);
       } else if (isDataUrl) {
-        console.log("data url: Found");
+        // console.log("data url: Found");
         const promise = () => {
           img.attr("src", url);
         };
@@ -302,7 +302,9 @@ const processHtmlFiles = async (
         );
       } else {
         console.log(
-          `${docxFileName.replace(".docx", ".html")} created successfully.`
+          `\x1b[33m 
+          ${docxFileName.replace(".docx", ".html")} created successfully.
+          \x1b[0m`
         );
       }
     });
