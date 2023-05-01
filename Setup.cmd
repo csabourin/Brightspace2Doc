@@ -1,6 +1,10 @@
 @echo off
 color 1F
 mode con: cols=80 lines=30
+if not exist node_modules (
+    echo Installing dependencies...
+    npm install
+)
 echo " ____  ____   __    ___  _  _  ____  ____  ____   __    ___  ____ "
 echo "(  _ \(  _ \ (  )  / __)/ )( \(_  _)/ ___)(  _ \ / _\  / __)(  __)"
 echo " ) _ ( )   /  )(  ( (_ \) __ (  )(  \___ \ ) __//    \( (__  ) _) "
