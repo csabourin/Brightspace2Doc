@@ -333,79 +333,91 @@ const parseItems = (itemList, itemResourceMap, resourceMap) => {
 };
 
 async function parseQuizXml(xmlString) {
-  let parsedData;
-  }
+	let parsedData;
+	let quizData = [];
 
-  if (
-    !parsedData ||
-    !parsedData.questestinterop ||
-    !parsedData.questestinterop.assessment ||
-    !parsedData.questestinterop.assessment[0] ||
-    !parsedData.questestinterop.assessment[0].section ||
-    !parsedData.questestinterop.assessment[0].section[0] ||
-    !parsedData.questestinterop.assessment[0].section[0].item
-  ) {
-    console.error('Invalid XML data format or missing required elements');
-    return;
-  }
-
-  const questions = parsedData.questestinterop.assessment[0].section[0].item;
- 
-  if (!questions) {
-      console.log("No questions found in the XML.");
-      return quizData;
-  }
-
-  questions.forEach((question) => {
-      if (!question.presentation || !question.presentation[0].flow) {
-          return;
-      }
-
-      const questionText =
-          question.presentation[0].flow[0].material[0].mattext[0]._;
-
-      const answerOptions = question.presentation[0].flow[0].response_lid[0].render_choice[0].flow_label;
-
-      const answerChoices = answerOptions.map(
-          (answerOption) =>
-              answerOption.response_label[0].flow_mat[0].material[0].mattext[0]._
-      );
-
-      const feedbacks = question.itemfeedback.map(
-      );
-
-      const correctAnswerIdent = question.resprocessing[0].respcondition.find(
-          (condition) => parseFloat(condition.setvar[0]._)
-      ).conditionvar[0].varequal[0]._;
-      const correctAnswerIndex = answerOptions.findIndex(
-          (answerOption) =>
-              answerOption.response_label[0].$.ident === correctAnswerIdent
-      );
-      const correctAnswer = String.fromCharCode(65 + correctAnswerIndex);
-
-      quizData.push({
-          question: questionText,
-          answerChoices: answerChoices,
-          correctAnswer: correctAnswer,
-          feedbacks: feedbacks,
-      });
-  });
-
-  return quizData;
-};
-
+	try {
+		parsedData = await xml2js.parseStringPromise(xmlString, {
+			explicitArray: false,
+			tagNameProcessors: [xml2js.processors.stripPrefix],
+		});
+	} catch (error) {
+		console.error("Error parsing XML:", error);
 		return quizData;
+	}
+	const section = parsedData.questestinterop.assessment.section;
+	const items = section.item
+		? Array.isArray(section.item)
+			? section.item
+			: [section.item]
+		: null;
+	if (!items) {
+		console.warn("No items found in quiz XML");
+		return;
+	}
+	items.forEach((item, index) => {
+		const metadataFields = item.itemmetadata.qtimetadata.qti_metadatafield;
 
 		const qmdQuestionTypeField = metadataFields.find(
+			(field) => field.fieldlabel === "qmd_questiontype"
+		);
+		const qmdQuestionTypeValue = qmdQuestionTypeField
+			? qmdQuestionTypeField.fieldentry
+			: null;
+
 		const isMultipleChoice = qmdQuestionTypeValue === "Multiple Choice";
 		const isMultiSelect = qmdQuestionTypeValue === "Multi-Select";
 
+		// const isMultipleChoice = metadataFields.some(
 		// 	(field) =>
 		// 		field.fieldlabel === "qmd_questiontype" &&
 		// 		field.fieldentry === "Multiple Choice"
 		// );
+
+		// const isMultiSelect = metadataFields.some(
+		// 	(field) =>
+		// 		field.fieldlabel === "qmd_questiontype" &&
+		// 		field.fieldentry === "Multi-Select"
+		// );
+
+		if (isMultipleChoice) {
+			if (!item.presentation || !item.presentation?.flow) {
+				return;
+			}
+
+			const questionText = item.presentation.flow.material.mattext._;
+
+			const answerOptions =
+				item.presentation.flow.response_lid.render_choice.flow_label;
+
+			const answerChoices = answerOptions.map(
+				(answerOption) =>
+					answerOption.response_label.flow_mat.material.mattext._
+			);
+
+			const feedbacks = item.itemfeedback.map(
+				(feedback) => feedback.material.mattext._
+			);
+
+			const correctAnswerIdent = item.resprocessing.respcondition.find(
+				(condition) => parseFloat(condition.setvar._)
+			).conditionvar.varequal._;
+			const correctAnswerIndex = answerOptions.findIndex(
+				(answerOption) =>
 					answerOption.response_label.$.ident === correctAnswerIdent
 			);
+			const correctAnswer = String.fromCharCode(65 + correctAnswerIndex);
+
+			quizData.push({
+				question: questionText,
+				answerChoices: answerChoices,
+				correctAnswer: correctAnswer,
+				feedbacks: feedbacks,
+			});
+		} else if (isMultiSelect) {
+			const questionText = item.presentation.flow.material.mattext._;
+			const answerOptions =
+				item.presentation.flow.response_lid.render_choice.flow_label;
 			const answerChoices = answerOptions.map(
 				(answerOption) =>
 					answerOption.response_label.flow_mat.material.mattext._
