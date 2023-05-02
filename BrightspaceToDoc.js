@@ -367,6 +367,7 @@ async function parseQuizXml(xmlString) {
 
 		const isMultipleChoice = qmdQuestionTypeValue === "Multiple Choice";
 		const isMultiSelect = qmdQuestionTypeValue === "Multi-Select";
+		const isOrdering = qmdQuestionTypeValue === "Ordering";
 
 		// const isMultipleChoice = metadataFields.some(
 		// 	(field) =>
@@ -423,22 +424,77 @@ async function parseQuizXml(xmlString) {
 					answerOption.response_label.flow_mat.material.mattext._
 			);
 
+			// Extract correct answers based on the 'setvar' value of 1
 			const correctAnswerIdents = item.resprocessing.respcondition
-				.filter((condition) => parseFloat(condition.setvar[0]))
-				.map((condition) => condition.conditionvar.varequal);
+				.filter((condition) => condition.setvar._ === "1")
+				.flatMap((condition) => {
+					if (condition.conditionvar.varequal) {
+						return condition.conditionvar.varequal;
+					}
+					return [];
+				});
 
-			const correctAnswers = correctAnswerIdents.map((ident) => {
-				const index = answerOptions.findIndex(
-					(answerOption) => answerOption.response_label.$.ident === ident
+			// Extract response_label objects
+			const responseLabels =
+				item.presentation.flow.response_lid.render_choice.flow_label.map(
+					(flow_label) => flow_label.response_label
 				);
-				return String.fromCharCode(65 + index);
+
+			// Save the correct answers as an array of uppercase letters
+			const correctAnswers = correctAnswerIdents.map((ident) => {
+				const responseLabel = responseLabels.find(
+					(label) => label.$.ident === ident._
+				);
+				const answerIndex = responseLabels.indexOf(responseLabel);
+				const letter = String.fromCharCode(65 + answerIndex); // Convert the index to an uppercase letter
+				return letter;
 			});
 
 			quizData.push({
 				questionType: "Multi-Select",
 				question: questionText,
 				answerChoices: answerChoices,
-				correctAnswers: correctAnswers,
+				correctAnswer: correctAnswers.join(", "),
+			});
+		} else if (isOrdering) {
+			const question = item.presentation.flow.material.mattext._;
+
+			const choices =
+				item.presentation.flow.response_grp.render_choice.flow_label.response_label.map(
+					(choice) => {
+						return choice.flow_mat.material.mattext._;
+					}
+				);
+			// Extract correct answers based on the 'setvar' value of 1
+			const correctAnswerIndices = item.resprocessing.respcondition
+				.filter((condition) => condition.setvar._ === "1")
+				.flatMap((condition) => {
+					if (condition.conditionvar.varequal) {
+						return condition.conditionvar.varequal._;
+					} else if (
+						condition.conditionvar.not &&
+						condition.conditionvar.not.varequal
+					) {
+						return [];
+					}
+					return [];
+				});
+
+			// Save the correct answers as an array of uppercase letters
+			const correctAnswers = correctAnswerIndices.map((index) => {
+				const letter = String.fromCharCode(
+					64 + parseInt(index.split("_").pop())
+				); // Convert the index to an uppercase letter
+				return letter;
+			});
+
+			// console.log("Question:", question);
+			// console.log("Choices:", choices);
+			quizData.push({
+				questionType: "Ordering",
+				question: question,
+				answerChoices: choices,
+				correctAnswer: correctAnswers,
 			});
 		} else {
 			console.log("Question type not supported:" + qmdQuestionTypeValue);
@@ -474,7 +530,7 @@ const formatQuizDataAsHtml = (quizData) => {
 
 const parseQuizXmlFile = async (quizFilePath) => {
 	const quizContent = await readFile(quizFilePath);
-	console.log(quizFilePath);
+	// console.log(quizFilePath);
 	const quizData = await parseQuizXml(quizContent);
 	return quizData;
 };
