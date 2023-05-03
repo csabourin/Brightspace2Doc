@@ -1,4 +1,29 @@
 @echo off
+echo Checking for npm...
+where npm >nul 2>nul
+if %errorlevel% == 0 (
+    echo npm is already installed.
+    goto runScript
+) else (
+    echo Nodejs is not installed.
+    :installPrompt
+    echo Do you want to install npm? ^(Y/N^)
+    set /p choice=
+   if /I "%choice%"=="Y" goto install
+    if /I "%choice%"=="y" goto install
+    if /I "%choice%"=="N" goto end
+    if /I "%choice%"=="n" goto end
+    echo Invalid choice. Please enter Y or N.
+    goto installPrompt
+    :install
+    echo Installing npm...
+    start "" "https://nodejs.org/en/download/"
+    echo Please download and install Node.js from the link above, which includes npm.
+)
+echo Exiting script...
+pause
+goto end
+:runScript
 color 1F
 mode con: cols=80 lines=30
 if not exist node_modules (
@@ -21,12 +46,5 @@ echo  ^|____^|^|_____/  \___/  \___^|/_/\_\
 echo.
 set /p "zipFile=Drag your zip file here and press Enter: "
 node BrightspaceToDoc.js "%zipFile%"
+:end
 pause
-
-
-
-
-
-
-                                                        
-                                                        
