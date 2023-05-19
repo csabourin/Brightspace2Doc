@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<questestinterop xmlns:d2l_2p0="http://desire2learn.com/xsd/d2lcp_v2p0">
+    <assessment d2l_2p0:id="84" title="1.2 — Check your knowledge: Product management concepts"
+        ident="res_quiz_3721" d2l_2p0:resource_code="23116E12-04C0-4FA6-BDD4-3082E33A4375-32098">
+        <rubric>
+            <flow_mat>
+                <material>
+                    <mattext d2l_2p0:isdisplayed="no" texttype="text/html" />
+                </material>
+            </flow_mat>
+        </rubric>
+        <assessmentcontrol hintswitch="no" solutionswitch="no" feedbackswitch="no" />
+        <presentation_material>
+            <flow_mat>
+                <material label="page header">
+                    <mattext d2l_2p0:isdisplayed="no" texttype="text/html" />
+                </material>
+                <material label="page footer">
+                    <mattext d2l_2p0:isdisplayed="no" texttype="text/html" />
+                </material>
+            </flow_mat>
+        </presentation_material>
+        <assess_procextension>
+            <d2l_2p0:intro_message d2l_2p0:isdisplayed="no" texttype="text/html" />
+            <d2l_2p0:disable_right_click>no</d2l_2p0:disable_right_click>
+            <d2l_2p0:disable_pager_access>no</d2l_2p0:disable_pager_access>
+            <is_active>yes</is_active>
+            <d2l_2p0:date_start />
+            <d2l_2p0:date_end />
+            <d2l_2p0:date_due />
+            <d2l_2p0:has_schedule_event>no</d2l_2p0:has_schedule_event>
+            <d2l_2p0:is_attempt_Rldb>no</d2l_2p0:is_attempt_Rldb>
+            <d2l_2p0:is_subview_Rldb>no</d2l_2p0:is_subview_Rldb>
+            <d2l_2p0:time_limit>0</d2l_2p0:time_limit>
+            <d2l_2p0:show_clock>no</d2l_2p0:show_clock>
+            <d2l_2p0:enforce_time_limit>no</d2l_2p0:enforce_time_limit>
+            <d2l_2p0:quiz_start_type>no</d2l_2p0:quiz_start_type>
+            <d2l_2p0:grace_period>5</d2l_2p0:grace_period>
+            <d2l_2p0:late_limit>0</d2l_2p0:late_limit>
+            <d2l_2p0:attempts_allowed>1</d2l_2p0:attempts_allowed>
+            <d2l_2p0:attempt_restrictions />
+            <d2l_2p0:mark_calculation_type>1</d2l_2p0:mark_calculation_type>
+            <d2l_2p0:is_forward_only>yes</d2l_2p0:is_forward_only>
+        </assess_procextension>
+        <assessfeedback>
+            <rubric>
+                <flow_mat>
+                    <material>
+                        <mattext texttype="no"> </mattext>
+                    </material>
+                </flow_mat>
+            </rubric>
+            <d2l_2p0:duration>0</d2l_2p0:duration>
+            <d2l_2p0:response_display_type_id>1</d2l_2p0:response_display_type_id>
+            <d2l_2p0:show_correct_answers>no</d2l_2p0:show_correct_answers>
+            <d2l_2p0:submission_restrictip>no</d2l_2p0:submission_restrictip>
+            <d2l_2p0:show_class_average>no</d2l_2p0:show_class_average>
+            <d2l_2p0:show_score_distribution>no</d2l_2p0:show_score_distribution>
+        </assessfeedback>
+        <section ident="CONTAINER_SECTION">
+            <selection_ordering>
+                <order order_type="Random" />
+            </selection_ordering>
+            <itemref linkrefid="QUES_12667_19503" d2l_2p0:page="1">
+                <d2l_2p0:file href="questiondb.xml" />
+                <d2l_2p0:points>1.000000000</d2l_2p0:points>
+                <d2l_2p0:difficulty>1</d2l_2p0:difficulty>
+                <d2l_2p0:isbonus>no</d2l_2p0:isbonus>
+                <d2l_2p0:ismandatory>no</d2l_2p0:ismandatory>
+            </itemref>
+            <itemref linkrefid="QUES_12674_19488" d2l_2p0:page="1">
+                <d2l_2p0:file href="questiondb.xml" />
+                <d2l_2p0:points>1.000000000</d2l_2p0:points>
+                <d2l_2p0:difficulty>1</d2l_2p0:difficulty>
+                <d2l_2p0:isbonus>no</d2l_2p0:isbonus>
+                <d2l_2p0:ismandatory>no</d2l_2p0:ismandatory>
+            </itemref>
+            <itemref linkrefid="QUES_12682_18892" d2l_2p0:page="1">
+                <d2l_2p0:file href="questiondb.xml" />
+                <d2l_2p0:points>1.000000000</d2l_2p0:points>
+                <d2l_2p0:difficulty>1</d2l_2p0:difficulty>
+                <d2l_2p0:isbonus>no</d2l_2p0:isbonus>
+                <d2l_2p0:ismandatory>no</d2l_2p0:ismandatory>
+            </itemref>
+            <itemref linkrefid="QUES_12683_19495" d2l_2p0:page="1">
+                <d2l_2p0:file href="questiondb.xml" />
+                <d2l_2p0:points>1.000000000</d2l_2p0:points>
+                <d2l_2p0:difficulty>1</d2l_2p0:difficulty>
+                <d2l_2p0:isbonus>no</d2l_2p0:isbonus>
+                <d2l_2p0:ismandatory>no</d2l_2p0:ismandatory>
+            </itemref>
+            <itemref linkrefid="QUES_12720_19489" d2l_2p0:page="1">
+                <d2l_2p0:file href="questiondb.xml" />
+                <d2l_2p0:points>1.000000000</d2l_2p0:points>
+                <d2l_2p0:difficulty>1</d2l_2p0:difficulty>
+                <d2l_2p0:isbonus>no</d2l_2p0:isbonus>
+                <d2l_2p0:ismandatory>no</d2l_2p0:ismandatory>
+            </itemref>
+            <itemref linkrefid="QUES_13045_19494" d2l_2p0:page="1">
+                <d2l_2p0:file href="questiondb.xml" />
+                <d2l_2p0:points>1.000000000</d2l_2p0:points>
+                <d2l_2p0:difficulty>1</d2l_2p0:difficulty>
+                <d2l_2p0:isbonus>no</d2l_2p0:isbonus>
+                <d2l_2p0:ismandatory>no</d2l_2p0:ismandatory>
+            </itemref>
+            <itemref linkrefid="QUES_13046_19500" d2l_2p0:page="1">
+                <d2l_2p0:file href="questiondb.xml" />
+                <d2l_2p0:points>1.000000000</d2l_2p0:points>
+                <d2l_2p0:difficulty>1</d2l_2p0:difficulty>
+                <d2l_2p0:isbonus>no</d2l_2p0:isbonus>
+                <d2l_2p0:ismandatory>no</d2l_2p0:ismandatory>
+            </itemref>
+        </section>
+    </assessment>
+</questestinterop>
