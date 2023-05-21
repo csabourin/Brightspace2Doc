@@ -617,34 +617,34 @@ async function parseQuizXml(xmlString) {
 					correctAnswer: correctAnswer,
 				});
 			} else if (isMatching) {
-        const parseConditions = (respConditions) => {
-          return respConditions.map((condition) => {
-            let conditionvar = condition.conditionvar;
-            let setvar = condition.setvar;
-        
-            // Condition details
-            let responseIdentifier, match;
-            if (conditionvar.varequal) {
-              responseIdentifier = conditionvar.varequal.$.respident; // Switched
-              match = conditionvar.varequal._; // Switched
-            } else if (conditionvar.vargte) {
-              responseIdentifier = conditionvar.vargte.$.respident; // Switched
-              match = conditionvar.vargte._; // Switched
-            }
-        
-            return {
-              condition: {
-                responseIdentifier,
-                match,
-              },
-              action: {
-                varName: setvar.$.varname,
-                actionType: setvar.$.action,
-                value: Number(setvar._),
-              },
-            };
-          });
-        };
+				const parseConditions = (respConditions) => {
+					return respConditions.map((condition) => {
+						let conditionvar = condition.conditionvar;
+						let setvar = condition.setvar;
+
+						// Condition details
+						let responseIdentifier, match;
+						if (conditionvar.varequal) {
+							responseIdentifier = conditionvar.varequal.$.respident; // Switched
+							match = conditionvar.varequal._; // Switched
+						} else if (conditionvar.vargte) {
+							responseIdentifier = conditionvar.vargte.$.respident; // Switched
+							match = conditionvar.vargte._; // Switched
+						}
+
+						return {
+							condition: {
+								responseIdentifier,
+								match,
+							},
+							action: {
+								varName: setvar.$.varname,
+								actionType: setvar.$.action,
+								value: Number(setvar._),
+							},
+						};
+					});
+				};
 
 				// Parse the question
 				const question = item.presentation.flow.material.mattext._;
@@ -668,7 +668,7 @@ async function parseQuizXml(xmlString) {
 				);
 
 				// Parse the feedback
-				const feedback = item.itemfeedback.material.mattext._;
+				const feedback = item.itemfeedback?.material.mattext._;
 
 				quizData.push({
 					questionType: "Matching",
