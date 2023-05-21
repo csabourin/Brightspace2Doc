@@ -1,5 +1,5 @@
-const headReplace = `<head>
-<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+const headReplace = `
+<meta http-equiv=Content-Type content="text/html; charset=UTF-8">
 <meta name=Generator content="Microsoft Word 15 (filtered)">
 <style>
 <!--
@@ -19,7 +19,7 @@ const headReplace = `<head>
 	{font-family:"Segoe UI";
 	panose-1:2 11 5 2 4 2 4 2 2 3;}
  /* Style Definitions */
- p.MsoNormal, li.MsoNormal, div.MsoNormal
+ p, li, div
 	{margin-top:0in;
 	margin-right:0in;
 	margin-bottom:8.0pt;
@@ -43,7 +43,7 @@ span.HeaderChar
 span.FooterChar
 	{mso-style-name:"Footer Char";
 	mso-style-link:Footer;}
-span.CSPSEFPC-TitlesTitres
+h1,span.CSPSEFPC-TitlesTitres
 	{mso-style-name:"CSPS\/EFPC - Titles\/Titres";
 	font-family:"Georgia",serif;
 	color:#3F2A56;
@@ -88,7 +88,5 @@ div.WordSection1
 ul
 	{margin-bottom:0in;}
 -->
-</style>
-
-</head>`;
+</style>`;
 module.exports = headReplace;

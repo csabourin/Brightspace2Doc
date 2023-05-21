@@ -83,7 +83,7 @@ const urlToBase64 = async (url) => {
 		}
 
 		const base64 = buffer.toString("base64");
-		return `data:img/png;base64,${base64}`;
+		return `data:image/png;base64,${base64}`;
 	} else {
 		if (url.includes("/") && !url.startsWith(".") && !url.startsWith("..")) {
 			url = "./" + url;
@@ -113,7 +113,9 @@ const urlToBase64 = async (url) => {
 					}
 
 					const base64 = data.toString("base64");
-					const final = `data:img/png;base64,${base64}`;
+					const final = `data:${
+						isSvg ? "image/png" : mimeType
+					};base64,${base64}`;
 					resolve(`${final}`);
 				}
 			});
@@ -194,12 +196,12 @@ const processHtmlFiles = async (
 
 			try {
 				const base64Data = await urlToBase64(src);
-				const final = base64Data.startsWith("data:")
-					? base64Data
-					: "data:image/png;base64," + base64Data;
-				img.attr("src", `${final}`);
+				if (!base64Data.startsWith("data:")) {
+					throw new Error(`Invalid data URL: ${base64Data}`);
+				}
+				img.attr("src", base64Data);
 			} catch (err) {
-				// console.error(`Error converting image to base64: ${src}`);
+				console.error(`Error converting image to base64: ${src}`,err);
 			}
 		}
 		return $.html();
@@ -239,13 +241,33 @@ const processHtmlFiles = async (
 
 	const $ = cheerio.load(combinedHtmlContent);
 
-	const images = $("img");
+	const imagesAndSvgs = $("img, svg");
 	const imagePromises = [];
-	images.each((index, image) => {
-		const img = $(image);
-		const url = img.attr("src");
-		const isSvg = url.toLowerCase().endsWith(".svg");
-		const isDataUrl = url.startsWith("data:");
+	imagesAndSvgs.each((index, el) => {
+		const element = $(el);
+		const isSvgElement = el.tagName.toLowerCase() === "svg";
+		const url = element.attr("src");
+
+		// Separate handling for <svg> elements
+		if (isSvgElement) {
+			const svgString = $.html(element);
+			const promise = svgStringToPngBuffer(svgString)
+				.then((buffer) => {
+					const pngBase64DataUrl = `data:image/png;base64,${buffer.toString(
+						"base64"
+					)}`;
+					element.replaceWith(`<img src="${pngBase64DataUrl}"/>`);
+				})
+				.catch((err) => {
+					// console.warn(`Error processing inline SVG element, skipping: ${svgString}`);
+					// console.warn(err.message);
+				});
+			imagePromises.push(promise);
+			return; // Skip the rest of this iteration, proceed to the next element
+		}
+
+		const isSvg = url && url.toLowerCase().endsWith(".svg");
+		const isDataUrl = url && url.startsWith("data:");
 
 		try {
 			if (isSvg) {
@@ -263,7 +285,7 @@ const processHtmlFiles = async (
 						const pngBase64DataUrl = `data:image/png;base64,${buffer.toString(
 							"base64"
 						)}`; // Fix MIME type for PNG data URL
-						img.attr("src", pngBase64DataUrl);
+						element.attr("src", pngBase64DataUrl);
 					})
 					.catch((err) => {
 						// console.warn(`Error processing SVG image, skipping: ${url}`);
@@ -273,23 +295,23 @@ const processHtmlFiles = async (
 			} else if (isDataUrl) {
 				// console.log("data url: Found");
 				const promise = () => {
-					img.attr("src", url);
+					element.attr("src", url);
 				};
 				imagePromises.push(promise);
 			} else {
 				const promise = urlToBase64(url)
 					.then((base64DataUrl) => {
-						img.attr("src", base64DataUrl);
+						element.attr("src", base64DataUrl);
 					})
 					.catch((err) => {
 						// Add catch block for non-SVG and non-data URL images
-						// console.warn(`Error processing image, skipping image: ${url}`);
-						// console.warn(err.message);
+						console.warn(`Error processing image, skipping image: ${url}`);
+						console.warn(err.message);
 					});
 				imagePromises.push(promise);
 			}
 		} catch (err) {
-			// console.error(`Error processing image, skipping image: ${url}`);
+			console.error(`Error processing image, skipping image: ${url}`);
 		}
 	});
 
@@ -301,7 +323,6 @@ const processHtmlFiles = async (
   <html lang="${language}">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     ${headReplace}
     <title>${titleElement}</title>
   </head>
