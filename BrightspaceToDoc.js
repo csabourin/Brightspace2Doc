@@ -454,6 +454,7 @@ async function parseQuizXml(xmlString) {
 			const isMultiSelect = qmdQuestionTypeValue === "Multi-Select";
 			const isOrdering = qmdQuestionTypeValue === "Ordering";
 			const isTrueFalse = qmdQuestionTypeValue === "True/False";
+			const isMatching = qmdQuestionTypeValue === "Matching";
 			// console.log("****** Question Type: ", qmdQuestionTypeValue);
 
 			// const isMultipleChoice = metadataFields.some(
@@ -615,6 +616,67 @@ async function parseQuizXml(xmlString) {
 					answerChoices: answerChoices,
 					correctAnswer: correctAnswer,
 				});
+			} else if (isMatching) {
+        const parseConditions = (respConditions) => {
+          return respConditions.map((condition) => {
+            let conditionvar = condition.conditionvar;
+            let setvar = condition.setvar;
+        
+            // Condition details
+            let responseIdentifier, match;
+            if (conditionvar.varequal) {
+              responseIdentifier = conditionvar.varequal.$.respident; // Switched
+              match = conditionvar.varequal._; // Switched
+            } else if (conditionvar.vargte) {
+              responseIdentifier = conditionvar.vargte.$.respident; // Switched
+              match = conditionvar.vargte._; // Switched
+            }
+        
+            return {
+              condition: {
+                responseIdentifier,
+                match,
+              },
+              action: {
+                varName: setvar.$.varname,
+                actionType: setvar.$.action,
+                value: Number(setvar._),
+              },
+            };
+          });
+        };
+
+				// Parse the question
+				const question = item.presentation.flow.material.mattext._;
+
+				// Parse the answer choices
+				const answerChoices = item.presentation.flow.response_grp.map(
+					(responseGroup) => ({
+						label: responseGroup.material.mattext._,
+						options: responseGroup.render_choice.flow_label.response_label.map(
+							(label) => ({
+								text: label.flow_mat.material.mattext._,
+								ident: label.$.ident,
+							})
+						),
+					})
+				);
+
+				// Parse the correct answer
+				const correctAnswerData = parseConditions(
+					item.resprocessing.respcondition
+				);
+
+				// Parse the feedback
+				const feedback = item.itemfeedback.material.mattext._;
+
+				quizData.push({
+					questionType: "Matching",
+					question: question,
+					answerChoices: answerChoices,
+					correctAnswer: correctAnswerData,
+					feedbacks: feedback,
+				});
 			} else {
 				console.warn("Question type not supported:" + qmdQuestionTypeValue);
 				return;
@@ -653,23 +715,55 @@ const findItemByLabel = async (filePath, label) => {
 	return found;
 };
 
+function isCorrectChoice(correctAnswerData, groupIdent, choiceIdent) {
+	return correctAnswerData.some((cond) => {
+		const { condition, action } = cond;
+		return (
+			condition.responseIdentifier === groupIdent &&
+			condition.match === choiceIdent &&
+			action.varName === "D2L_Correct"
+		);
+	});
+}
+
 const formatQuizDataAsHtml = (quizData, title) => {
 	let quizHtml = `<h1>${title}</h1> <ol>`;
 	if (!quizData) return "<h1>Missing quiz data</h1>";
 	quizData.forEach((quizItem) => {
-		let { question, answerChoices, feedbacks, correctAnswer } = quizItem;
+		let { questionType, question, answerChoices, feedbacks, correctAnswer } =
+			quizItem;
 		if (!question) return;
+		if (questionType !== "Matching") {
+			correctAnswer = correctAnswer ? correctAnswer : "N/A";
 
-		correctAnswer = correctAnswer ? correctAnswer : "N/A";
+			quizHtml += `<li><div>${question}</div><ol type="A">`;
 
-		quizHtml += `<li><div>${question}</div><ol type="A">`;
+			answerChoices.forEach((choice, index) => {
+				quizHtml += `<li>${choice}</li>`;
+			});
+			quizHtml += language.toString().startsWith("en")
+				? `</ol><p>Correct Answer: ${correctAnswer}</p></li>`
+				: `</ol><p>Bonne réponse: ${correctAnswer}</p></li>`;
 
-		answerChoices.forEach((choice, index) => {
-			quizHtml += `<li>${choice}</li>`;
-		});
-		quizHtml += language.toString().startsWith("en")
-			? `</ol><p>Correct Answer: ${correctAnswer}</p></li>`
-			: `</ol><p>Bonne réponse: ${correctAnswer}</p></li>`;
+			quizHtml += feedbacks ? `<p>Feedback: ${feedbacks}</p>` : "";
+		} else {
+			quizHtml += `<li><div>${question}</div><ul>`;
+
+			answerChoices.forEach((group) => {
+				quizHtml += `<h3>${group.label}</h3><ul>`;
+				group.options.forEach((option) => {
+					const isCorrect = isCorrectChoice(
+						correctAnswer,
+						group.ident,
+						option.ident
+					);
+					quizHtml += `<li>${option.text}${isCorrect ? " (Correct)" : ""}</li>`;
+				});
+				quizHtml += "</ul>";
+			});
+
+			quizHtml += `</ul><h2>Feedback</h2><p>${feedbacks}</p></li>`;
+		}
 	});
 
 	quizHtml += "</ol>";
