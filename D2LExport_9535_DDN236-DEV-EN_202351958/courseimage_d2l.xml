@@ -1,9 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<course_appearance>
-	<course_image>
-		<pictureId />
-		<hasCatalogPic>False</hasCatalogPic>
-		<picLocation>banner-bg.jpg</picLocation>
-	</course_image>
-	<show_course_banner>False</show_course_banner>
-</course_appearance>
