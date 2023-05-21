@@ -45,7 +45,11 @@ const processZipFile = async (zipFilePath) => {
 
 const urlToBase64 = async (url) => {
 	// Check if the URL starts with "/shared/LCS_HTML_Templates/" and prepend the domain
-	if (url.startsWith("/shared/LCS_HTML_Templates/")) {
+	if (
+		url.startsWith("/shared/LCS_HTML_Templates/") ||
+		url.startsWith(`/d2l/common/`) ||
+		url.startsWith(`/content/enforced/`)
+	) {
 		url = "https://app.csps-efpc.gc.ca" + url;
 	}
 
@@ -61,7 +65,7 @@ const urlToBase64 = async (url) => {
 			const pngBuffer = await sharp(inputBuffer).png().toBuffer();
 			return pngBuffer;
 		} catch (error) {
-			console.error("Error converting SVG to PNG:", error);
+			console.error("Error converting SVG to PNG");
 			throw error;
 		}
 	};
@@ -160,9 +164,16 @@ const processHtmlFiles = async (
 			const img = images.eq(i);
 			let src = img[0].attribs.src;
 
-			if (src.startsWith("/shared/LCS_HTML_Templates/")) {
+			if (
+				src.startsWith("/shared/LCS_HTML_Templates/") ||
+				src.startsWith(`/d2l/common/`) ||
+				src.startsWith(`/content/enforced/`)
+			) {
 				src = "https://app.csps-efpc.gc.ca" + src;
 			}
+
+			// Remove URL parameters
+			src = src.split("?")[0];
 
 			// Check if src is an absolute URL
 			if (src.startsWith("http://") || src.startsWith("https://")) {
@@ -188,7 +199,7 @@ const processHtmlFiles = async (
 					: "data:image/png;base64," + base64Data;
 				img.attr("src", `${final}`);
 			} catch (err) {
-				console.error(`Error converting image to base64: ${src}`, err);
+				// console.error(`Error converting image to base64: ${src}`);
 			}
 		}
 		return $.html();
@@ -255,8 +266,8 @@ const processHtmlFiles = async (
 						img.attr("src", pngBase64DataUrl);
 					})
 					.catch((err) => {
-						console.warn(`Error processing SVG image, skipping: ${url}`);
-						console.warn(err.message);
+						// console.warn(`Error processing SVG image, skipping: ${url}`);
+						// console.warn(err.message);
 					});
 				imagePromises.push(promise);
 			} else if (isDataUrl) {
@@ -272,13 +283,13 @@ const processHtmlFiles = async (
 					})
 					.catch((err) => {
 						// Add catch block for non-SVG and non-data URL images
-						console.warn(`Error processing image, skipping image: ${url}`);
-						console.warn(err.message);
+						// console.warn(`Error processing image, skipping image: ${url}`);
+						// console.warn(err.message);
 					});
 				imagePromises.push(promise);
 			}
 		} catch (err) {
-			console.error(`Error processing image, skipping image: ${url}`, err);
+			// console.error(`Error processing image, skipping image: ${url}`);
 		}
 	});
 
@@ -335,10 +346,11 @@ const parseItems = (itemList, itemResourceMap, resourceMap) => {
 			return;
 		}
 		const identifierRef = item.$.identifierref;
+		const isHidden = item.$.isvisible === "False";
 		const title = item.title[0];
 		const description = item.$.description;
 
-		if (resourceMap[identifierRef]) {
+		if (resourceMap[identifierRef] && !isHidden) {
 			const resourceData = resourceMap[identifierRef];
 			itemResourceMap[title] = {
 				href: resourceData.isHtmlResource ? resourceData.href : "",
@@ -362,7 +374,7 @@ async function parseQuizXml(xmlString) {
 			tagNameProcessors: [xml2js.processors.stripPrefix],
 		});
 	} catch (error) {
-		console.error("Error parsing XML:", error);
+		console.error("Error parsing XML");
 		return quizData;
 	}
 
@@ -381,7 +393,7 @@ async function parseQuizXml(xmlString) {
 		: [];
 
 	if (!items.length && !itemRefs.length) {
-		console.warn("No items or item references found in quiz XML", section);
+		console.warn("No items or item references found in quiz XML");
 		return;
 	}
 
@@ -641,8 +653,8 @@ const findItemByLabel = async (filePath, label) => {
 	return found;
 };
 
-const formatQuizDataAsHtml = (quizData) => {
-	let quizHtml = "<ol>";
+const formatQuizDataAsHtml = (quizData, title) => {
+	let quizHtml = `<h1>${title}</h1> <ol>`;
 	if (!quizData) return "<h1>Missing quiz data</h1>";
 	quizData.forEach((quizItem) => {
 		let { question, answerChoices, feedbacks, correctAnswer } = quizItem;
@@ -747,7 +759,7 @@ const processImsManifest = async (imsManifestPath) => {
 			if (!isContentLink) {
 				const quizFilePath = path.join(tempDir, href);
 				const quizData = await parseQuizXmlFile(quizFilePath);
-				const quizHtmlContent = formatQuizDataAsHtml(quizData);
+				const quizHtmlContent = formatQuizDataAsHtml(quizData, title);
 				quizHtmlContentMap[title] = quizHtmlContent;
 			} else {
 				titleToResourceMap[title] = identifier;
@@ -762,7 +774,7 @@ const processImsManifest = async (imsManifestPath) => {
 		if (resourceData.isQuizResource) {
 			const quizFilePath = path.join(tempDir, resourceData.href);
 			const quizData = await parseQuizXmlFile(quizFilePath);
-			const quizHtmlContent = formatQuizDataAsHtml(quizData);
+			const quizHtmlContent = formatQuizDataAsHtml(quizData, title);
 			quizHtmlContentMap[title] = quizHtmlContent;
 		}
 	}
