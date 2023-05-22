@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brightspace2Docx</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+        color: #343a40;
+        padding: 20px;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        text-align: center;
+      }
+      h1 {
+        margin-bottom: 30px;
+      }
+      .custom-file-upload {
+        display: inline-block;
+        padding: 6px 12px;
+        cursor: pointer;
+        border-radius: 4px;
+        background-color: #007bff;
+        color: #fff;
+        margin-bottom: 10px;
+      }
+      .button {
+        background-color: #28a745;
+        border: none;
+        color: white;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        transition-duration: 0.4s;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      .button:hover {
+        background-color: #218838;
+        color: white;
+      }
+      .loader {
+        border: 16px solid #f3f3f3;
+        border-top: 16px solid #3498db;
+        border-radius: 50%;
+        width: 120px;
+        height: 120px;
+        animation: spin 2s linear infinite;
+        margin: auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Brightspace2Docx</h1>
+      <form
+        id="upload-form"
+        action="/upload"
+        method="post"
+        enctype="multipart/form-data"
+      >
+        <label for="file-upload" class="custom-file-upload">
+          Upload File
+        </label>
+        <input
+          id="file-upload"
+          type="file"
+          name="file"
+          style="display: none"
+          required
+        />
+
+        <br />
+        <input type="radio" id="html" name="fileType" value="html" checked />
+        <label for="html">HTML</label>
+        <input type="radio" id="docx" name="fileType" value="docx" />
+        <label for="docx">DOCX</label>
+
+        <br />
+        <button type="submit" class="button">Submit</button>
+      </form>
+      <div id="loading-spinner" style="display: none">
+        <div class="loader"></div>
+      </div>
+      <a id="download-link" style="display: none">Download File</a>
+    </div>
+    <script>
+      document
+        .getElementById("upload-form")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+          document.getElementById("download-link").style.display = "none";
+          document.getElementById("loading-spinner").style.display = "block";
+
+          const formData = new FormData(event.target);
+
+          fetch("/upload", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => {
+              // Get the filename from the Content-Disposition header
+              const disposition = response.headers.get("Content-Disposition");
+              let filename = "output.docx"; // Default filename if we can't get one from the header
+              if (
+                disposition &&
+                /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.test(disposition)
+              ) {
+                filename = disposition
+                  .match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)[1]
+                  .replace(/['"]/g, "");
+              }
+
+              // Get the actual file data
+              return response.blob().then((blob) => {
+                return {
+                  blob,
+                  filename,
+                };
+              });
+            })
+            .then(({ blob, filename }) => {
+              document.getElementById("loading-spinner").style.display = "none";
+              const downloadLink = document.getElementById("download-link");
+              downloadLink.href = URL.createObjectURL(blob);
+              downloadLink.download = filename; // Use the filename from the server
+              downloadLink.style.display = "block";
+            })
+            .catch((err) => {
+              console.error("An error occurred:", err);
+            });
+        });
+    </script>
+  </body>
+</html>
