@@ -811,6 +811,7 @@ const formatQuizDataAsHtml = (quizData, title) => {
 };
 
 const parseQuizXmlFile = async (quizFilePath) => {
+  console.log("Parsing quiz file: " + quizFilePath );
   const quizContent = await readFile(quizFilePath);
   const quizData = await parseQuizXml(quizContent);
   return quizData;
