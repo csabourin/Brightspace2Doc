@@ -30,7 +30,12 @@
       h1 {
         margin-bottom: 30px;
         font-family: "Fredericka the Great", sans-serif;
-        font-size: 60px;
+        font-size: 4em;
+      }
+      @media only screen and (max-width: 600px) {
+        h1 {
+          font-size: 2em; 
+        }
       }
       .custom-file-upload {
         display: inline-block;
@@ -112,6 +117,16 @@
 
       .emoji {
         margin-right: 10px;
+      }
+      footer {
+        width: 100%;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        background-color: #f8f9fa;
+        color: #212529;
+        padding: 10px 0;
+        font-size: 14px;
       }
     </style>
   </head>
@@ -203,6 +218,9 @@
         Download File
       </a>
     </div>
+    <footer>
+      <p>© Copyright Christian Sabourin 2023</p>
+    </footer>
     <script>
       document
         .getElementById("upload-form")
