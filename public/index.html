@@ -8,6 +8,12 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fredericka+the+Great&display=swap"
+      rel="stylesheet"
+    />
     <title>Brightspace2Docx</title>
     <style>
       body {
@@ -23,6 +29,8 @@
       }
       h1 {
         margin-bottom: 30px;
+        font-family: "Fredericka the Great", sans-serif;
+        font-size: 60px;
       }
       .custom-file-upload {
         display: inline-block;
@@ -60,6 +68,23 @@
         animation: spin 2s linear infinite;
         margin: auto;
       }
+      details {
+        text-align: left;
+        margin-bottom: 2rem;
+      }
+      details summary {
+        text-align: center;
+        cursor: pointer;
+        outline: 1px solid #3498db;
+        padding: 1rem;
+        border-radius: 4px;
+      }
+      .file-upload-button {
+        padding: 0.5rem;
+        font-size: large;
+        border-radius: 5px;
+      }
+
       @keyframes spin {
         0% {
           transform: rotate(0deg);
@@ -67,6 +92,26 @@
         100% {
           transform: rotate(360deg);
         }
+      }
+
+      .download-button {
+        display: inline-block;
+        padding: 15px 30px;
+        margin-top: 20px;
+        font-size: 18px;
+        color: white;
+        text-decoration: none;
+        background-color: #3498db;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+      }
+
+      .download-button:hover {
+        background-color: #2980b9;
+      }
+
+      .emoji {
+        margin-right: 10px;
       }
     </style>
   </head>
@@ -112,14 +157,14 @@
           <ul>
             <li>Go to the Brightspace2Docx website.</li>
             <li>
-              Click on the upload button and select the ZIP file you saved from
-              Brightspace.
+              Click on the Select FIle button and select the ZIP file you saved
+              from Brightspace.
             </li>
             <li>
               Select the output format you want for your document: HTML or DOCX.
             </li>
             <li>
-              Click the "Submit" button. You'll see a loading spinner while your
+              Click the "Upload" button. You'll see a loading spinner while your
               file is being processed. Please be patient as this process can
               take a few minutes.
             </li>
@@ -136,16 +181,11 @@
         method="post"
         enctype="multipart/form-data"
       >
-        <label for="file-upload" class="custom-file-upload">
-          Upload File
-        </label>
-        <input
-          id="file-upload"
-          type="file"
-          name="file"
-          style="display: none"
-          required
-        />
+        <div class="file-upload-wrapper">
+          <button type="button" class="file-upload-button">Select File</button>
+          <input type="file" name="file" id="file-upload" required hidden />
+          <p id="file-name" class="file-name"></p>
+        </div>
 
         <p>
           <input type="radio" id="html" name="fileType" value="html" checked />
@@ -153,18 +193,27 @@
           <input type="radio" id="docx" name="fileType" value="docx" />
           <label for="docx">DOCX</label>
         </p>
-        <button type="submit" class="button">Submit</button>
+        <button type="submit" class="button">Upload</button>
       </form>
       <div id="loading-spinner" style="display: none">
         <div class="loader"></div>
       </div>
-      <a id="download-link" style="display: none">Download File</a>
+      <a id="download-link" class="download-button" style="display: none">
+        <span class="emoji">📥</span>
+        Download File
+      </a>
     </div>
     <script>
       document
         .getElementById("upload-form")
         .addEventListener("submit", function (event) {
           event.preventDefault();
+
+          const fileInput = document.querySelector('input[type="file"]');
+          if (!fileInput.files.length) {
+            alert("Please select a file before submitting.");
+            return;
+          }
           document.getElementById("download-link").style.display = "none";
           document.getElementById("loading-spinner").style.display = "block";
 
@@ -206,6 +255,22 @@
               console.error("An error occurred:", err);
             });
         });
+
+      const fileUploadButton = document.querySelector(".file-upload-button");
+      const fileUpload = document.getElementById("file-upload");
+      const fileNameDisplay = document.getElementById("file-name");
+
+      fileUploadButton.addEventListener("click", function () {
+        fileUpload.click();
+      });
+
+      fileUpload.addEventListener("change", function () {
+        if (fileUpload.files.length > 0) {
+          fileUploadButton.style.backgroundColor = "#3498db"; // Change the color of the button
+          fileUploadButton.style.color = "white"; // Change the color of the button
+          fileNameDisplay.textContent = fileUpload.files[0].name; // Display the name of the file
+        }
+      });
     </script>
   </body>
 </html>
