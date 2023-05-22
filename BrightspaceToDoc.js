@@ -95,9 +95,10 @@ const urlToBase64 = async (url) => {
     }
     const decodedUrl = decodeURI(url); // Decode the URL in case it contains spaces or other special characters
     const absoluteSrc = path.resolve(tempDir, decodedUrl);
+	const correctedPath = absoluteSrc.replace(/\\/g, '/');
 
     return new Promise((resolve, reject) => {
-      fs.readFile(absoluteSrc, async (error, data) => {
+      fs.readFile(correctedPath, async (error, data) => {
         if (error) {
           if (error.code === "ENOENT") {
             console.warn(`File not found, skipping: ${absoluteSrc}`);
@@ -138,8 +139,9 @@ const sanitizeFilename = (filename) => {
 };
 
 const readFile = (path) => {
+	let correctedPath = path.replace(/\\/g, '/');
   return new Promise((resolve, reject) => {
-    fs.readFile(path, "utf8", (err, content) => {
+    fs.readFile(correctedPath, "utf8", (err, content) => {
       if (err) {
         reject(err);
       } else {
