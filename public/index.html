@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <title>Brightspace2Docx</title>
     <style>
       body {
@@ -69,6 +73,63 @@
   <body>
     <div class="container">
       <h1>Brightspace2Docx</h1>
+      <details>
+        <summary>How to use Brightspace2Docx</summary>
+        <p>
+          Follow these steps to convert your D2L Brightspace course content into
+          HTML or DOCX format:
+        </p>
+
+        <ol>
+          <li><b>Export your course from D2L Brightspace:</b></li>
+          <ul>
+            <li>
+              Login to D2L Brightspace and navigate to the course you wish to
+              export.
+            </li>
+            <li>
+              Click on "Course Admin" in the navbar, then click on "Import /
+              Export / Copy Components".
+            </li>
+            <li>Choose "Export as Brightspace Package" and click "Start".</li>
+            <li>Choose "Select All Components" then click "Continue".</li>
+            <li>
+              Review the components to be exported, select 'Include course files
+              in the export package' and click "Continue".
+            </li>
+            <li>
+              Click "Done" after the export is complete. You'll get a ZIP file
+              to download, save it on your computer.
+            </li>
+            <li>
+              Please note: If your course contains a large number of embedded
+              videos, the ZIP file may become too large for the conversion
+              process. For best results, ensure your ZIP file is no larger than
+              50MB.
+            </li>
+          </ul>
+          <li><b>Convert your course content with Brightspace2Docx:</b></li>
+          <ul>
+            <li>Go to the Brightspace2Docx website.</li>
+            <li>
+              Click on the upload button and select the ZIP file you saved from
+              Brightspace.
+            </li>
+            <li>
+              Select the output format you want for your document: HTML or DOCX.
+            </li>
+            <li>
+              Click the "Submit" button. You'll see a loading spinner while your
+              file is being processed. Please be patient as this process can
+              take a few minutes.
+            </li>
+            <li>
+              Once the process is complete, a "Download File" link will appear.
+              Click on this link to download your converted document.
+            </li>
+          </ul>
+        </ol>
+      </details>
       <form
         id="upload-form"
         action="/upload"
@@ -86,13 +147,12 @@
           required
         />
 
-        <br />
-        <input type="radio" id="html" name="fileType" value="html" checked />
-        <label for="html">HTML</label>
-        <input type="radio" id="docx" name="fileType" value="docx" />
-        <label for="docx">DOCX</label>
-
-        <br />
+        <p>
+          <input type="radio" id="html" name="fileType" value="html" checked />
+          <label for="html">HTML</label>
+          <input type="radio" id="docx" name="fileType" value="docx" />
+          <label for="docx">DOCX</label>
+        </p>
         <button type="submit" class="button">Submit</button>
       </form>
       <div id="loading-spinner" style="display: none">
