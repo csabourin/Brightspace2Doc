@@ -381,7 +381,7 @@ const parseItems = (itemList, itemResourceMap, resourceMap) => {
     const description = item.$.description;
     const isHidden = item.$.isvisible === "False";
 
-    if (resourceMap[identifierRef] && !isHidden) {
+    if (resourceMap[identifierRef]) {
       const resourceData = resourceMap[identifierRef];
       itemResourceMap[title] = {
         href: resourceData.isHtmlResource ? resourceData.href : "",

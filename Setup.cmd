@@ -44,7 +44,5 @@ echo    / / ^| ^|  ^| ^| / _ \  / __^|\ \/ /
 echo   / /_ ^| ^|__^| ^|^| ^(_^) ^|^| ^(__  ^>  ^<                                 
 echo  ^|____^|^|_____/  \___/  \___^|/_/\_\ 
 echo.
-set /p "zipFile=Drag your zip file here and press Enter: "
-node BrightspaceToDoc.js "%zipFile%"
 :end
 pause
