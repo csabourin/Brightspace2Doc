@@ -99,6 +99,11 @@
           transform: rotate(360deg);
         }
       }
+      #easter-egg-img{
+        position: absolute;
+        opacity: 0.5;
+        transition:all 0.5s ease;
+      }
 
       .download-button {
         display: inline-block;
@@ -212,7 +217,8 @@
         <button type="submit" class="button">Upload</button>
       </form>
       <div id="loading-spinner" style="display: none">
-        <div class="loader"></div>
+        <img src="android-chrome-192x192.png" id="easter-egg-img" alt="Sébastien Gilbert" width="auto" style="display:none">
+        <div id="loader" class="loader"></div>
       </div>
       <a id="download-link" class="download-button" style="display: none">
         <span class="emoji">📥</span>
@@ -290,6 +296,20 @@
           fileNameDisplay.textContent = fileUpload.files[0].name; // Display the name of the file
         }
       });
+
+      let loaderElement = document.getElementById("loader");
+let easterEggImg = document.getElementById("easter-egg-img");
+
+loaderElement.addEventListener("click", function() {
+  // make the image visible
+  easterEggImg.style.display = "block";
+
+  // after 3 seconds, hide it again
+  setTimeout(function() {
+    easterEggImg.style.display = "none";
+  }, 3000);
+});
+
     </script>
   </body>
 </html>
