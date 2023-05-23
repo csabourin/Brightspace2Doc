@@ -231,8 +231,9 @@
       <button type="submit" class="button">Upload</button>
     </form>
     <div id="loading-spinner" style="display: none">
-      
-      <div id="loader" class="loader"><img src="android-chrome-192x192.png" id="easter-egg-img" alt="Sébastien Gilbert"></div>
+
+      <div id="loader" class="loader"><img src="android-chrome-192x192.png" id="easter-egg-img" alt="Sébastien Gilbert">
+      </div>
     </div>
     <a id="download-link" class="download-button" style="display: none">
       <span class="emoji">📥</span>
@@ -263,6 +264,11 @@
           body: formData,
         })
           .then((response) => {
+            if (!response.ok) {
+              return response.json().then(data => {
+                throw new Error(data.error);
+              });
+            }
             // Get the filename from the Content-Disposition header
             const disposition = response.headers.get("Content-Disposition");
             let filename = "output.docx"; // Default filename if we can't get one from the header
@@ -291,7 +297,9 @@
             downloadLink.style.display = "block";
           })
           .catch((err) => {
-            console.error("An error occurred:", err);
+            document.getElementById("loading-spinner").style.display = "none";
+            alert("An error occurred. Please check your uploaded file.");
+            console.error("An error occurred:", err.message);
           });
       });
 
@@ -312,17 +320,17 @@
     });
 
     let loaderElement = document.getElementById("loader");
-let easterEggImg = document.getElementById("easter-egg-img");
+    let easterEggImg = document.getElementById("easter-egg-img");
 
-loaderElement.addEventListener("click", function() {
-  // make the image visible
-  easterEggImg.style.opacity = 1;
+    loaderElement.addEventListener("click", function () {
+      // make the image visible
+      easterEggImg.style.opacity = 1;
 
-  // after 3 seconds, hide it again
-  setTimeout(function() {
-    easterEggImg.style.opacity = 0;
-  }, 3000);
-});
+      // after 3 seconds, hide it again
+      setTimeout(function () {
+        easterEggImg.style.opacity = 0;
+      }, 3000);
+    });
 
   </script>
 </body>

@@ -957,16 +957,16 @@ let fileType;
 app.use(express.static("public"));
 app.use(express.urlencoded({ extended: true }));
 app.post("/upload", upload.single("file"), (req, res) => {
-	// req.file is the file that was uploaded
-	// you can now run your script on this file
 	zipFilePath = req.file.path;
 	fileType = req.body.fileType;
 	if (zipFilePath) {
 		processZipFile(zipFilePath, res).catch((err) => {
 			console.error("Error processing zip file:", err);
+			res.status(500).send({message: 'Error processing the file.', error: err.message});
 		});
 	} else {
 		console.error("Please provide a zip file path as a command-line argument.");
+		res.status(400).send({message: 'No file uploaded. Please provide a zip file.'});
 	}
 });
 
