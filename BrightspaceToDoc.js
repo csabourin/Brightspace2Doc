@@ -20,24 +20,6 @@ const port = process.env.PORT || 3000;
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
 
-const askFileType = () => {
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
-
-	return new Promise((resolve) => {
-		rl.question(
-			"Do you want to save the file as HTML or DOCX? (html/docx): ",
-			(answer) => {
-				rl.close();
-				const fileType = answer.trim().toLowerCase();
-				resolve(fileType === "html" ? "html" : "docx");
-			}
-		);
-	});
-};
-
 const processZipFile = async (zipFilePath, res) => {
 	const zip = new AdmZip(zipFilePath);
 	zip.extractAllTo(tempDir, true);
@@ -389,32 +371,30 @@ const processHtmlFiles = async (
 };
 
 const parseItems = (itemList, itemResourceMap, resourceMap) => {
-	for (const item of itemList) {
-		if (!item || !item.$ || !item.title) {
-			console.warn("Invalid item structure encountered, skipping");
-			continue;
-		}
+  itemList.forEach((item) => {
+    if (!item || !item.$ || !item.title) {
+      console.warn("Invalid item structure encountered, skipping");
+      return;
+    }
+    const identifierRef = item.$.identifierref;
+    const title = item.title[0];
+    const description = item.$.description;
+    const isHidden = item.$.isvisible === "False";
 
-		const identifierRef = item.$.identifierref;
-		const isHidden = item.$.isvisible === "False";
-		const itemTitle = item.title[0];
-		const description = item.$.description;
+    if (resourceMap[identifierRef] && !isHidden) {
+      const resourceData = resourceMap[identifierRef];
+      itemResourceMap[title] = {
+        href: resourceData.isHtmlResource ? resourceData.href : "",
+        description: description ? description : "",
+      };
+    }
 
-		if (resourceMap[identifierRef] && !isHidden) {
-			const resourceData = resourceMap[identifierRef];
-			// Replace the resource title with item title
-			resourceData.title = itemTitle;
-			itemResourceMap[itemTitle] = {
-				href: resourceData.isHtmlResource ? resourceData.href : "",
-				description: description ? description : "",
-			};
-		}
-
-		if (item.item) {
-			parseItems(item.item, itemResourceMap, resourceMap);
-		}
-	}
+    if (item.item) {
+      parseItems(item.item, itemResourceMap, resourceMap);
+    }
+  });
 };
+
 
 async function parseQuizXml(xmlString) {
 	let parsedData;
@@ -871,16 +851,33 @@ const processImsManifest = async (imsManifestPath, res) => {
 		return;
 	}
 
+	function populateIdentifierRefMap(item, map) {
+		if (item.$ && item.title && item.title[0]) {
+			map[item.$.identifierref] = item.title[0];
+		}
+		if (item.item) {
+			for (const subItem of item.item) {
+				populateIdentifierRefMap(subItem, map);
+			}
+		}
+	}
+
+	// Create a map of identifierrefs to titles
+	const identifierRefToTitleMap = {};
+	for (const item of organization.item) {
+		populateIdentifierRefMap(item, identifierRefToTitleMap);
+	}
+
 	// Inside the processImsManifest function, after parsing the resources
 	// we can iterate over the resources and check if the resource is a quiz
 	// First loop: populate resourceMap and titleToResourceMap
-	manifestJson.manifest.resources[0].resource.forEach(async (resource) => {
+	for (const resource of manifestJson.manifest.resources[0].resource) {
 		const identifier = resource.$.identifier;
-		const title = resource.$.title;
+		let title = resource.$.title;
 		const href = resource.$.href;
 		const materialType = resource.$["d2l_2p0:material_type"];
 		const isHtmlResource = href && href.toLowerCase().endsWith(".html");
-		const isQuizResource =
+		let isQuizResource =
 			href && href.toLowerCase().endsWith(".xml") && materialType === "d2lquiz";
 		const isContentLink = materialType === "contentlink";
 		let finalHref = href;
@@ -890,10 +887,16 @@ const processImsManifest = async (imsManifestPath, res) => {
 			for (let id in resourceMap) {
 				if (resourceMap[id].title === title && resourceMap[id].isQuizResource) {
 					finalHref = resourceMap[id].href;
+					isQuizResource = true;
+					title = identifierRefToTitleMap[id];
 					break;
 				}
 			}
 		}
+
+		// if (title !== identifierRefToTitleMap[identifier]) {
+		// 	title = identifierRefToTitleMap[identifier];
+		// }
 
 		resourceMap[identifier] = {
 			href: finalHref,
@@ -902,24 +905,26 @@ const processImsManifest = async (imsManifestPath, res) => {
 			title,
 		};
 
+		if (isQuizResource) {
+			// if (!isContentLink) {
+			titleToResourceMap[title] = identifier;
+			const quizFilePath = path.join(tempDir, href);
+			const quizData = await parseQuizXmlFile(quizFilePath);
+			const quizHtmlContent = formatQuizDataAsHtml(quizData, title);
+			quizHtmlContentMap[title] = quizHtmlContent;
+			// } else {
+			// 	console.log("Title 3: " + title);
+			// 	titleToResourceMap[title] = identifier;
+			// 	title = identifierRefToTitleMap[identifier];
+			// }
+		}
 		parseItems(
 			organization.item,
 			itemResourceMap,
 			resourceMap,
 			quizHtmlContentMap
 		);
-
-		if (isQuizResource) {
-			if (!isContentLink) {
-				const quizFilePath = path.join(tempDir, href);
-				const quizData = await parseQuizXmlFile(quizFilePath);
-				const quizHtmlContent = formatQuizDataAsHtml(quizData, title);
-				quizHtmlContentMap[title] = quizHtmlContent;
-			} else {
-				titleToResourceMap[title] = identifier;
-			}
-		}
-	});
+	}
 
 	// Second loop: process content links
 	for (const title in titleToResourceMap) {
