@@ -136,6 +136,9 @@ const readFile = (path) => {
 const decodeHtml = (encodedHtml) => {
 	return he.decode(String(encodedHtml));
 };
+const svgStringToPngBuffer = async (svgString) => {
+	return sharp(Buffer.from(svgString)).png().toBuffer();
+};
 
 const processHtmlFiles = async (
 	itemResourceMap,
@@ -371,30 +374,29 @@ const processHtmlFiles = async (
 };
 
 const parseItems = (itemList, itemResourceMap, resourceMap) => {
-  itemList.forEach((item) => {
-    if (!item || !item.$ || !item.title) {
-      console.warn("Invalid item structure encountered, skipping");
-      return;
-    }
-    const identifierRef = item.$.identifierref;
-    const title = item.title[0];
-    const description = item.$.description;
-    const isHidden = item.$.isvisible === "False";
+	itemList.forEach((item) => {
+		if (!item || !item.$ || !item.title) {
+			console.warn("Invalid item structure encountered, skipping");
+			return;
+		}
+		const identifierRef = item.$.identifierref;
+		const title = item.title[0];
+		const description = item.$.description;
+		const isHidden = item.$.isvisible === "False";
 
-    if (resourceMap[identifierRef]) {
-      const resourceData = resourceMap[identifierRef];
-      itemResourceMap[title] = {
-        href: resourceData.isHtmlResource ? resourceData.href : "",
-        description: description ? description : "",
-      };
-    }
+		if (resourceMap[identifierRef]) {
+			const resourceData = resourceMap[identifierRef];
+			itemResourceMap[title] = {
+				href: resourceData.isHtmlResource ? resourceData.href : "",
+				description: description ? description : "",
+			};
+		}
 
-    if (item.item) {
-      parseItems(item.item, itemResourceMap, resourceMap);
-    }
-  });
+		if (item.item) {
+			parseItems(item.item, itemResourceMap, resourceMap);
+		}
+	});
 };
-
 
 async function parseQuizXml(xmlString) {
 	let parsedData;
@@ -962,11 +964,15 @@ app.post("/upload", upload.single("file"), (req, res) => {
 	if (zipFilePath) {
 		processZipFile(zipFilePath, res).catch((err) => {
 			console.error("Error processing zip file:", err);
-			res.status(500).send({message: 'Error processing the file.', error: err.message});
+			res
+				.status(500)
+				.send({ message: "Error processing the file.", error: err.message });
 		});
 	} else {
 		console.error("Please provide a zip file path as a command-line argument.");
-		res.status(400).send({message: 'No file uploaded. Please provide a zip file.'});
+		res
+			.status(400)
+			.send({ message: "No file uploaded. Please provide a zip file." });
 	}
 });
 
