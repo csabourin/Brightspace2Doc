@@ -1,3 +1,4 @@
+const debug = false;
 const fs = require("fs");
 const htmlDocx = require("html-docx-js");
 const xml2js = require("xml2js");
@@ -299,7 +300,7 @@ const processHtmlFiles = async (
 					.catch((err) => {
 						// Add catch block for non-SVG and non-data URL images
 						console.warn(`Error processing image, skipping image: ${url}`);
-						console.warn(err.message);
+						if (debug) console.warn(err.message);
 					});
 				imagePromises.push(promise);
 			}
@@ -401,6 +402,8 @@ const parseItems = (itemList, itemResourceMap, resourceMap) => {
 async function parseQuizXml(xmlString) {
 	let parsedData;
 	let quizData = [];
+	let items = [];
+	let sectionItems = [];
 
 	try {
 		parsedData = await xml2js.parseStringPromise(xmlString, {
@@ -408,74 +411,113 @@ async function parseQuizXml(xmlString) {
 			tagNameProcessors: [xml2js.processors.stripPrefix],
 		});
 	} catch (error) {
-		console.error("Error parsing XML");
+		console.error("Error parsing XML: ", error);
 		return quizData;
 	}
 
-	const section = parsedData.questestinterop.assessment.section;
-
-	let items = section.item
-		? Array.isArray(section.item)
-			? section.item
-			: [section.item]
-		: [];
-
-	let itemRefs = section.itemref
-		? Array.isArray(section.itemref)
-			? section.itemref
-			: [section.itemref]
-		: [];
-
-	if (!items.length && !itemRefs.length) {
-		console.warn("No items or item references found in quiz XML");
-		return;
+	if (
+		!parsedData ||
+		!parsedData.questestinterop ||
+		!parsedData.questestinterop.assessment
+	) {
+		console.error("Unexpected structure in parsed XML data");
+		return quizData;
 	}
 
-	// Tag each element as either an item or an itemRef
-	items = items.map((item) => ({ ...item, type: "item" }));
-	itemRefs = itemRefs.map((itemRef) => ({ ...itemRef, type: "itemRef" }));
+	const sections =
+		parsedData.questestinterop.assessment.section.$.ident ===
+		"CONTAINER_SECTION"
+			? parsedData.questestinterop.assessment.section
+			: parsedData.questestinterop.assessment.section.section;
 
-	// Merge the two arrays into one
-	const elementsToCheck = [...items, ...itemRefs];
+	if (!sections) {
+		console.error("No sections found in parsed XML data");
+		return quizData;
+	}
 
-	for (const element of elementsToCheck) {
-		if (element.type === "item") {
-			// Handle items...
-		} else if (element.type === "itemRef") {
-			// Handle itemRefs...
-			if (element["file"] && element["file"].$.href === "questiondb.xml") {
-				const item = await findItemByLabel(
-					"questiondb.xml",
-					element.$.linkrefid
-				);
-				item.type = "itemRef";
+	// Make sure sections is an array
+	const sectionArray = Array.isArray(sections) ? sections : [sections];
 
-				if (!item) {
-					console.warn(
-						`Could not find item with id ${element.$["linkrefid"]} in questiondb.xml`
+	function processSection(section) {
+		// Get items and itemRefs in the section
+		sectionItems = section.item
+			? Array.isArray(section.item)
+				? section.item
+				: [section.item]
+			: [];
+
+		itemRefs = section.itemref
+			? Array.isArray(section.itemref)
+				? section.itemref
+				: [section.itemref]
+			: [];
+
+		if (!sectionItems.length && !itemRefs.length) {
+			console.warn("No items or item references found in quiz XML section");
+			return;
+		}
+
+		// Tag each element as either an item or an itemRef
+		sectionItems = sectionItems.map((item) => ({ ...item, type: "item" }));
+		itemRefs = itemRefs.map((itemRef) => ({ ...itemRef, type: "itemRef" }));
+
+		// Add items and itemRefs to global lists
+		items.push(...sectionItems);
+		items.push(...itemRefs);
+	}
+
+	if (debug) console.log("469 Section array: ", items.length);
+	let processedItems = [];
+	for (const section of sectionArray) {
+		if (debug) console.log("470 Section: ", section.$.ident);
+		processSection(section);
+
+		// Also process nested sections, if they exist.
+		if (section.section && Array.isArray(section.section)) {
+			if (debug) console.log("475 Nested section found");
+			for (const nestedSection of section.section) {
+				processSection(nestedSection);
+			}
+		}
+		if (debug) console.log("482 items: ", items.length);
+		// Process items and itemRefs
+
+		// Process items and itemRefs
+		for (const element of items) {
+			if (element.type === "item") {
+				// Handle items...
+				processedItems.push(element); // Add the processed item to the new array
+			} else if (element.type === "itemRef") {
+				// Handle itemRefs...
+				if (element["file"] && element["file"].$.href === "questiondb.xml") {
+					const item = await findItemByLabel(
+						"questiondb.xml",
+						element.$.linkrefid
 					);
-				} else {
-					items.push(item); // Be careful with this as 'items' array is now part of 'elementsToCheck'
+					if (!item) {
+						console.warn(
+							`Could not find item with id ${element.$["linkrefid"]} in questiondb.xml`
+						);
+					} else {
+						processedItems.push({ ...item, type: "itemLinked" }); // Add the linked item to the new array
+					}
 				}
 			}
 		}
 	}
+	// Replace the old items array with the new one
+	items = processedItems;
 
 	if (!items) {
 		console.warn("No items found", xmlString);
 		return;
 	}
-
+	if (debug) console.log("515 Quiz items: ", items.length);
 	items.forEach((item, index) => {
-		// Check if qti_metadatafield exists
-
 		let metadataFields = [];
+		// Check if qti_metadatafield exists
 		if (item.itemmetadata) {
-			if (item.type === "itemRef") {
-				metadataFields = item.itemmetadata.qtimetadata.qti_metadatafield;
-			} else {
-				metadataFields = item.itemmetadata.qtimetadata.qti_metadatafield;
-			}
+			metadataFields = item.itemmetadata.qtimetadata.qti_metadatafield;
 
 			const qmdQuestionTypeField = metadataFields.find(
 				(field) => field.fieldlabel === "qmd_questiontype"
@@ -489,19 +531,7 @@ async function parseQuizXml(xmlString) {
 			const isOrdering = qmdQuestionTypeValue === "Ordering";
 			const isTrueFalse = qmdQuestionTypeValue === "True/False";
 			const isMatching = qmdQuestionTypeValue === "Matching";
-			// console.log("****** Question Type: ", qmdQuestionTypeValue);
-
-			// const isMultipleChoice = metadataFields.some(
-			// 	(field) =>
-			// 		field.fieldlabel === "qmd_questiontype" &&
-			// 		field.fieldentry === "Multiple Choice"
-			// );
-
-			// const isMultiSelect = metadataFields.some(
-			// 	(field) =>
-			// 		field.fieldlabel === "qmd_questiontype" &&
-			// 		field.fieldentry === "Multi-Select"
-			// );
+			if (debug) console.log("531 Question Type: ", qmdQuestionTypeValue);
 
 			if (isMultipleChoice) {
 				if (!item.presentation || !item.presentation?.flow) {
@@ -717,37 +747,81 @@ async function parseQuizXml(xmlString) {
 			}
 		} else {
 			console.warn("Metadata fields not found for item index: " + index);
+			if (debug) console.log("No MD in", item);
 		}
 	});
 
 	return quizData;
 }
 
-const findItemByLabel = async (filePath, label) => {
-	// Read XML file
-	const quizDBFilePath = path.join(tempDir, filePath);
-	const xml = await readFile(quizDBFilePath);
+const findItemByLabel = (() => {
+	let cacheKey = null;
+	let itemsCache = null;
 
-	// Parse XML to JS Object
-	const result = await xml2js.parseStringPromise(xml, {
-		explicitArray: false,
-		tagNameProcessors: [xml2js.processors.stripPrefix],
-	});
-	// Navigate to 'item' array
-	const objectbank = result.questestinterop.objectbank;
-	const items = objectbank.item
-		? Array.isArray(objectbank.item)
-			? objectbank.item
-			: [objectbank.item]
-		: null;
-	if (!items) {
-		return null;
-	}
-	// Find the object where the '$.label' property matches the provided label
-	const found = items.find((item) => item.$.label === label);
+	const processItems = (items, map) => {
+		// Ensure 'items' is an array (even if it's only one item)
+		const itemsArray = Array.isArray(items) ? items : [items];
 
-	return found;
-};
+		// Add each item to the map
+		itemsArray.forEach((item) => map.set(item.$.label, item));
+	};
+
+	const processSection = (section, map) => {
+		// Navigate to 'item' array in current section
+		const items = section.item ? processItems(section.item, map) : null;
+
+		// If current section contains nested sections, process those too
+		const nestedSections = section.section
+			? Array.isArray(section.section)
+				? section.section
+				: [section.section]
+			: [];
+
+		// Now it's safe to iterate over nestedSections
+		for (const nestedSection of nestedSections) {
+			processSection(nestedSection, map);
+		}
+	};
+
+	return async (filePath, label) => {
+		// Check if the cacheKey matches the current filePath
+		if (cacheKey !== filePath) {
+			cacheKey = filePath;
+			itemsCache = new Map();
+
+			// Read and parse XML file
+			const quizDBFilePath = path.join(tempDir, filePath);
+			const xml = await readFile(quizDBFilePath);
+
+			const result = await xml2js.parseStringPromise(xml, {
+				explicitArray: false,
+				tagNameProcessors: [xml2js.processors.stripPrefix],
+			});
+
+			// Get objectbank
+			const objectbank = result.questestinterop.objectbank;
+
+			// Process items directly under 'objectbank', if they exist
+			if (objectbank.item) {
+				processItems(objectbank.item, itemsCache);
+			}
+
+			// Make sure 'section' is an array (even if it's only one section)
+			const sections = objectbank.section
+				? Array.isArray(objectbank.section)
+					? objectbank.section
+					: [objectbank.section]
+				: undefined;
+
+			// Process each section, adding items to the map
+			sections &&
+				sections.forEach((section) => processSection(section, itemsCache));
+		}
+
+		// Find the object where the '$.label' property matches the provided label
+		return itemsCache.get(label);
+	};
+})();
 
 function isCorrectChoice(correctAnswerData, groupIdent, choiceIdent) {
 	return correctAnswerData.some((cond) => {
@@ -888,17 +962,13 @@ const processImsManifest = async (imsManifestPath, res) => {
 		if (isContentLink && href && href.toLowerCase().includes("type=quiz")) {
 			for (let id in resourceMap) {
 				if (resourceMap[id].title === title && resourceMap[id].isQuizResource) {
+					title = identifierRefToTitleMap[id];
 					finalHref = resourceMap[id].href;
 					isQuizResource = true;
-					title = identifierRefToTitleMap[id];
 					break;
 				}
 			}
 		}
-
-		// if (title !== identifierRefToTitleMap[identifier]) {
-		// 	title = identifierRefToTitleMap[identifier];
-		// }
 
 		resourceMap[identifier] = {
 			href: finalHref,
@@ -908,12 +978,15 @@ const processImsManifest = async (imsManifestPath, res) => {
 		};
 
 		if (isQuizResource) {
+			if (debug) console.log("984 Title: " + title);
 			// if (!isContentLink) {
 			titleToResourceMap[title] = identifier;
 			const quizFilePath = path.join(tempDir, href);
+			if (debug) console.log("982 Parsing quiz file: " + quizFilePath);
 			const quizData = await parseQuizXmlFile(quizFilePath);
 			const quizHtmlContent = formatQuizDataAsHtml(quizData, title);
 			quizHtmlContentMap[title] = quizHtmlContent;
+
 			// } else {
 			// 	console.log("Title 3: " + title);
 			// 	titleToResourceMap[title] = identifier;
@@ -944,7 +1017,7 @@ const processImsManifest = async (imsManifestPath, res) => {
 		metadata["imsmd:title"]?.[0]?.["imsmd:langstring"]?.[0]._;
 	language = metadata["imsmd:language"];
 	const sanitizedTitle = sanitizeFilename(titleElement);
-	console.log("Title: " + sanitizedTitle);
+	if (debug) console.log("1016 Title: " + sanitizedTitle);
 	const docxFileName = `${sanitizedTitle}.docx`;
 
 	await processHtmlFiles(
