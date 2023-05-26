@@ -428,7 +428,7 @@ async function parseQuizXml(xmlString) {
 		parsedData.questestinterop.assessment.section.$.ident ===
 		"CONTAINER_SECTION"
 			? parsedData.questestinterop.assessment.section
-			: parsedData.questestinterop.assessment.section.section;
+			: parsedData.questestinterop.assessment.section;
 
 	if (!sections) {
 		console.error("No sections found in parsed XML data");
@@ -439,6 +439,7 @@ async function parseQuizXml(xmlString) {
 	const sectionArray = Array.isArray(sections) ? sections : [sections];
 
 	function processSection(section) {
+		console.log("Processing section: ", section.$.ident);
 		// Get items and itemRefs in the section
 		sectionItems = section.item
 			? Array.isArray(section.item)
@@ -954,7 +955,9 @@ const processImsManifest = async (imsManifestPath, res) => {
 		const materialType = resource.$["d2l_2p0:material_type"];
 		const isHtmlResource = href && href.toLowerCase().endsWith(".html");
 		let isQuizResource =
-			href && href.toLowerCase().endsWith(".xml") && materialType === "d2lquiz";
+			href &&
+			href.toLowerCase().endsWith(".xml") &&
+			(materialType === "d2lquiz" || materialType === "d2lselfassess");
 		const isContentLink = materialType === "contentlink";
 		let finalHref = href;
 
