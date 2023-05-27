@@ -415,7 +415,7 @@ async function parseQuizXml(xmlString) {
 	const sectionArray = Array.isArray(sections) ? sections : [sections];
 
 	function processSection(section) {
-		console.log("Processing section: ", section.$.ident);
+		if (debug) console.log("Processing section: ", section.$.ident);
 		// Get items and itemRefs in the section
 		sectionItems = section.item
 			? Array.isArray(section.item)
@@ -430,7 +430,7 @@ async function parseQuizXml(xmlString) {
 			: [];
 
 		if (!sectionItems.length && !itemRefs.length) {
-			console.warn("No items or item references found in quiz XML section");
+			console.warn("No items or item references found in quiz XML section: ", section.$.ident);
 			return;
 		}
 
@@ -489,7 +489,7 @@ async function parseQuizXml(xmlString) {
 		console.warn("No items found", xmlString);
 		return;
 	}
-	if (debug) console.log("515 Quiz items: ", items.length);
+	if (debug) console.log("492 Quiz items: ", items.length);
 	items.forEach((item, index) => {
 		let metadataFields = [];
 		// Check if qti_metadatafield exists
@@ -508,7 +508,8 @@ async function parseQuizXml(xmlString) {
 			const isOrdering = qmdQuestionTypeValue === "Ordering";
 			const isTrueFalse = qmdQuestionTypeValue === "True/False";
 			const isMatching = qmdQuestionTypeValue === "Matching";
-			if (debug) console.log("531 Question Type: ", qmdQuestionTypeValue);
+			const isShortAnswer = qmdQuestionTypeValue === "Short Answer";
+			if (debug) console.log("521 Question Type: ", qmdQuestionTypeValue);
 
 			if (isMultipleChoice) {
 				if (!item.presentation || !item.presentation?.flow) {
@@ -718,6 +719,19 @@ async function parseQuizXml(xmlString) {
 					correctAnswer: correctAnswerData,
 					feedbacks: feedback,
 				});
+			} else if (isShortAnswer) {
+				let question = item.presentation.flow.material.mattext._;
+				let answerChoices = item.resprocessing.respcondition.map(
+					(resp) => resp.conditionvar?.varequal?._
+				);
+				let feedback = item.itemfeedback.material.mattext._;
+
+				quizData.push({
+					questionType: "Short Answer",
+					question: question,
+					answerChoices: answerChoices,
+					feedbacks: feedback,
+				});
 			} else {
 				console.warn("Question type not supported:" + qmdQuestionTypeValue);
 				return;
@@ -826,7 +840,7 @@ const formatQuizDataAsHtml = (quizData, title) => {
 			answerChoices.forEach((choice, index) => {
 				quizHtml += `<li>${choice}</li>`;
 			});
-			quizHtml+="</ol></li>";
+			quizHtml += "</ol></li>";
 			if (extractQuizAnswers) {
 				quizHtml += language.toString().startsWith("en")
 					? `<p>Correct Answer: ${correctAnswer}</p></li>`
