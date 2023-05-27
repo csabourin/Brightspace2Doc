@@ -148,7 +148,7 @@
       position: fixed;
       bottom: 0;
       background-color: #f8f9fa;
-      color: #212529;
+      color: #595e63;
       padding: 10px 0;
       font-size: 14px;
     }
@@ -204,6 +204,10 @@
             Select the output format you want for your document: HTML or DOCX.
           </li>
           <li>
+            If you don't want the correct answers to be included in the output, uncheck the "Include correct answers from quizzes"
+            checkbox.
+          </li>
+          <li>
             Click the "Upload" button. You'll see a loading spinner while your
             file is being processed. Please be patient as this process can
             take a few minutes.
@@ -227,6 +231,11 @@
         <label for="html">HTML</label>
         <input type="radio" id="docx" name="fileType" value="docx" />
         <label for="docx">DOCX</label>
+      </p>
+      <p class="options-wrapper">
+        <label for="extract-quiz-answers">Include correct answers from quizzes:</label>
+        <input type="checkbox" checked id="extract-quiz-answers" name="extractQuizAnswers" />
+        <!-- Include any other options you want here -->
       </p>
       <button type="submit" class="button">Upload</button>
     </form>

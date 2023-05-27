@@ -1,4 +1,4 @@
-const debug = false;
+const debug = process.env.debug_mode || false;
 const fs = require("fs");
 const htmlDocx = require("html-docx-js");
 const xml2js = require("xml2js");
@@ -20,6 +20,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
+let localBrightspaceUrl = process.env.bsurl || "https://app.csps-efpc.gc.ca";
+let extractQuizAnswers = true;
 
 const processZipFile = async (zipFilePath, res) => {
 	const zip = new AdmZip(zipFilePath);
@@ -38,7 +40,7 @@ const urlToBase64 = async (url) => {
 		url.startsWith(`/d2l/common/`) ||
 		url.startsWith(`/content/enforced/`)
 	) {
-		url = "https://app.csps-efpc.gc.ca" + url;
+		url = localBrightspaceUrl + url;
 	}
 
 	// Remove URL parameters
@@ -165,7 +167,7 @@ const processHtmlFiles = async (
 				src.startsWith(`/d2l/common/`) ||
 				src.startsWith(`/content/enforced/`)
 			) {
-				src = "https://app.csps-efpc.gc.ca" + src;
+				src = localBrightspaceUrl + src;
 			}
 
 			// Remove URL parameters
@@ -326,32 +328,6 @@ const processHtmlFiles = async (
   </html>
     `;
 
-	// if (fileType === "html") {
-	// 	fs.writeFile(docxFileName.replace(".docx", ".html"), resultHtml, (err) => {
-	// 		if (err) {
-	// 			console.error(
-	// 				`Error writing ${docxFileName.replace(".docx", ".html")}:`,
-	// 				err
-	// 			);
-	// 		} else {
-	// 			console.log(
-	// 				`\x1b[33m
-	//       ${docxFileName.replace(".docx", ".html")} created successfully.
-	//       \x1b[0m`
-	// 			);
-	// 		}
-	// 	});
-	// } else {
-	// 	const docx = htmlDocx.asBlob(resultHtml);
-	// 	const buffer = Buffer.from(await docx.arrayBuffer());
-	// 	fs.writeFile(docxFileName, buffer, (err) => {
-	// 		if (err) {
-	// 			console.error(`Error writing ${docxFileName}:`, err);
-	// 		} else {
-	// 			console.log(`${docxFileName} created successfully.`);
-	// 		}
-	// 	});
-	// }
 	if (fileType === "html") {
 		res.setHeader("Content-Type", "text/html");
 		res.setHeader(
@@ -850,11 +826,14 @@ const formatQuizDataAsHtml = (quizData, title) => {
 			answerChoices.forEach((choice, index) => {
 				quizHtml += `<li>${choice}</li>`;
 			});
-			quizHtml += language.toString().startsWith("en")
-				? `</ol><p>Correct Answer: ${correctAnswer}</p></li>`
-				: `</ol><p>Bonne réponse: ${correctAnswer}</p></li>`;
+			quizHtml+="</ol></li>";
+			if (extractQuizAnswers) {
+				quizHtml += language.toString().startsWith("en")
+					? `<p>Correct Answer: ${correctAnswer}</p></li>`
+					: `<p>Bonne réponse: ${correctAnswer}</p></li>`;
 
-			quizHtml += feedbacks ? `<p>Feedback: ${feedbacks}</p>` : "";
+				quizHtml += feedbacks ? `<p>Feedback: ${feedbacks}</p>` : "";
+			}
 		} else {
 			quizHtml += `<li><div>${question}</div><ul>`;
 
@@ -866,12 +845,17 @@ const formatQuizDataAsHtml = (quizData, title) => {
 						group.ident,
 						option.ident
 					);
-					quizHtml += `<li>${option.text}${isCorrect ? " (Correct)" : ""}</li>`;
+					if (extractQuizAnswers) {
+						quizHtml += `<li>${option.text}${
+							isCorrect ? " (Correct)" : ""
+						}</li>`;
+					}
 				});
 				quizHtml += "</ul>";
 			});
-
-			quizHtml += `</ul><h2>Feedback</h2><p>${feedbacks}</p></li>`;
+			if (extractQuizAnswers) {
+				quizHtml += `</ul><h2>Feedback</h2><p>${feedbacks}</p></li>`;
+			}
 		}
 	});
 
@@ -1037,6 +1021,7 @@ app.use(express.urlencoded({ extended: true }));
 app.post("/upload", upload.single("file"), (req, res) => {
 	zipFilePath = req.file.path;
 	fileType = req.body.fileType;
+	extractQuizAnswers = req.body.extractQuizAnswers;
 	if (zipFilePath) {
 		processZipFile(zipFilePath, res).catch((err) => {
 			console.error("Error processing zip file:", err);
@@ -1045,7 +1030,7 @@ app.post("/upload", upload.single("file"), (req, res) => {
 				.send({ message: "Error processing the file.", error: err.message });
 		});
 	} else {
-		console.error("Please provide a zip file path as a command-line argument.");
+		console.error("Please provide a zip file to process.");
 		res
 			.status(400)
 			.send({ message: "No file uploaded. Please provide a zip file." });
