@@ -6,6 +6,7 @@ const cheerio = require("cheerio");
 const he = require("he");
 const headReplace = require("./headReplace");
 const sharp = require("sharp");
+const { optimize } = require('svgo');
 const path = require("path");
 const mime = require("mime");
 const AdmZip = require("adm-zip");
@@ -52,7 +53,8 @@ const urlToBase64 = async (url) => {
 	// Utility to convert SVG to PNG Buffer
 	const convertSvgToPng = async (inputBuffer) => {
 		try {
-			const pngBuffer = await sharp(inputBuffer).png().toBuffer();
+			const result = optimize(inputBuffer);
+			const pngBuffer = await sharp(result.data).png().toBuffer();
 			return pngBuffer;
 		} catch (error) {
 			console.error("Error converting SVG to PNG");
