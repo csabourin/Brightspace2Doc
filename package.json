@@ -20,5 +20,8 @@
     "assets": [
       "node_modules/html-docx-js/build/assets/content_types.xml"
     ]
-  }
+  },
+  "scripts": {
+  "start": "node BrightspaceToDoc.js"
+}
 }
