@@ -1,5 +1,4 @@
 const debug = process.env.debug_mode || false;
-let extractQuizAnswers = true;
 let language = "en";
 const fs = require("fs");
 const xml2js = require("xml2js");
@@ -478,7 +477,9 @@ function isCorrectChoice(correctAnswerData, groupIdent, choiceIdent) {
   });
 }
 
-const formatQuizDataAsHtml = (quizData, title) => {
+const formatQuizDataAsHtml = (quizData, title, req) => {
+  const extractQuizAnswers = req.session.extractQuizAnswers;
+  console.log(extractQuizAnswers);
   let quizHtml = `<h1>${title}</h1> <ol>`;
   if (!quizData) return "<h1>Missing quiz data</h1>";
   quizData.forEach((quizItem) => {

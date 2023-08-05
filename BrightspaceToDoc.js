@@ -4,7 +4,7 @@ const htmlDocx = require("html-docx-js");
 const xml2js = require("xml2js");
 const cheerio = require("cheerio");
 const he = require("he");
-const headReplace = require("./headReplace");
+const headReplace = require("./utils/headReplace");
 const sharp = require("sharp");
 const path = require("path");
 const AdmZip = require("adm-zip");
@@ -14,23 +14,23 @@ const readline = require("readline");
 let language = "en";
 let titleElement = "BrightspaceToDocx";
 const express = require("express");
+const session = require('express-session');
 const app = express();
 const port = process.env.PORT || 3000;
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
 let localBrightspaceUrl = process.env.bsurl || "https://app.csps-efpc.gc.ca";
-let extractQuizAnswers = true;
 const { embedImages, urlToBase64, svgStringToPngBuffer } = require('./utils/process-images');
 const { parseItems,
   formatQuizDataAsHtml,
   readFile,
   parseQuizXmlFile } = require('./utils/process-quiz')
 
-const processZipFile = async (zipFilePath, res, tempDir) => {
+const processZipFile = async (zipFilePath, res, tempDir, req) => {
   const zip = new AdmZip(zipFilePath);
   zip.extractAllTo(tempDir, true);
   const imsManifestPath = path.join(tempDir, "imsmanifest.xml");
-  await processImsManifest(imsManifestPath, res, tempDir);
+  await processImsManifest(imsManifestPath, res, tempDir, req);
   
 
   rimraf.sync(tempDir); // Delete temporary folder
@@ -200,7 +200,7 @@ const processSvgElement = async (element, $) => {
 };
 
 
-const processImsManifest = async (imsManifestPath, res, tempDir) => {
+const processImsManifest = async (imsManifestPath, res, tempDir, req) => {
   const manifestContent = await readFile(imsManifestPath);
   const parser = new xml2js.Parser();
   const manifestJson = await parser.parseStringPromise(manifestContent);
@@ -302,7 +302,7 @@ const processImsManifest = async (imsManifestPath, res, tempDir) => {
       const quizFilePath = path.join(tempDir, href);
       if (debug) console.log("982 Parsing quiz file: " + quizFilePath);
       const quizData = await parseQuizXmlFile(quizFilePath);
-      const quizHtmlContent = formatQuizDataAsHtml(quizData, title);
+      const quizHtmlContent = formatQuizDataAsHtml(quizData, title,req);
       quizHtmlContentMap[title] = quizHtmlContent;
 
       // } else {
@@ -326,7 +326,7 @@ const processImsManifest = async (imsManifestPath, res, tempDir) => {
     if (resourceData.isQuizResource) {
       const quizFilePath = path.join(tempDir, resourceData.href);
       const quizData = await parseQuizXmlFile(quizFilePath);
-      const quizHtmlContent = formatQuizDataAsHtml(quizData, title);
+      const quizHtmlContent = formatQuizDataAsHtml(quizData, title,req);
       quizHtmlContentMap[title] = quizHtmlContent;
     }
   }
@@ -350,13 +350,20 @@ const processImsManifest = async (imsManifestPath, res, tempDir) => {
 let fileType;
 app.use(express.static("public"));
 app.use(express.urlencoded({ extended: true }));
+
+app.use(session({
+  secret:'BrightSpace2Docx',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: true } // Use 'secure: true' if you are using HTTPS
+}));
 app.post("/upload", upload.single("file"), (req, res) => {
   zipFilePath = req.file.path;
   fileType = req.body.fileType;
-  extractQuizAnswers = req.body.extractQuizAnswers;
+  req.session.extractQuizAnswers = req.body.extractQuizAnswers;
   if (zipFilePath) {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "bs2docx-"));
-    processZipFile(zipFilePath, res, tempDir).catch((err) => {
+    processZipFile(zipFilePath, res, tempDir, req).catch((err) => {
       console.error("Error processing zip file:", err);
       res
         .status(500)
