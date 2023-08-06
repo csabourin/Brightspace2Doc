@@ -4,6 +4,49 @@ const path = require("path");
 const fs = require("fs");
 const mime = require("mime");
 
+const constructLocalUrl = (src, localBrightspaceUrl) => {
+  if (
+    src.startsWith("/shared/LCS_HTML_Templates/") ||
+    src.startsWith(`/d2l/common/`)
+  ) {
+    return localBrightspaceUrl + src;
+  }
+  return src;
+};
+
+const replaceContentEnforcedPath = (src, localBrightspaceUrl) => {
+  let regexPattern;
+  if (src.startsWith(localBrightspaceUrl + "/content/enforced/")) {
+    regexPattern = new RegExp("^" + localBrightspaceUrl.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + "/content/enforced/[^/]+/");
+    src = src.replace(regexPattern, "");
+  }
+
+  if (src.startsWith("/content/enforced/")) {
+    regexPattern = new RegExp("/content/enforced/[^/]+/");
+    src = src.replace(regexPattern, "");
+  }
+
+  return src;
+};
+
+const removeUrlParameters = (src) => {
+  return src.split("?")[0];
+};
+
+const resolveAbsolutePath = (src, directoryPath) => {
+  if (src.startsWith("http://") || src.startsWith("https://")) {
+    return src; // Already an absolute URL
+  }
+  
+  if (src.startsWith("../")) {
+    src = src.substring(3);
+  }
+  
+  const absoluteSrc = path.resolve(directoryPath, src);
+  return decodeURIComponent(absoluteSrc);
+};
+
+
 const embedImages = async ($, htmlFilePath, localBrightspaceUrl) => {
   const images = $("img");
   const directoryPath = path.dirname(htmlFilePath);
@@ -14,35 +57,11 @@ const embedImages = async ($, htmlFilePath, localBrightspaceUrl) => {
     if (src === undefined) {
       continue;
     }
-    
-    if (
-      src.startsWith("/shared/LCS_HTML_Templates/") ||
-      src.startsWith(`/d2l/common/`) 
-    ) {
-      src = localBrightspaceUrl + src;
-    }
 
-if (src.startsWith(localBrightspaceUrl + "/content/enforced/")) {
-  const regexPattern = new RegExp("^" + localBrightspaceUrl.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + "/content/enforced/[^/]+/");
-  src = src.replace(regexPattern, "");
-}
-
-    // Remove URL parameters
-    src = src.split("?")[0];
-
-    // Check if src is an absolute URL
-    if (src.startsWith("http://") || src.startsWith("https://")) {
-      // Do nothing, src is already an absolute URL
-    } else {
-      // Resolve the absolute path of the image
-      if (src.includes("/") && !src.startsWith(".") && !src.startsWith("..")) {
-        
-    }
-      if(src.startsWith("../")){ src = src.substring(3);}
-      const absoluteSrc = path.resolve(directoryPath, src);
-      src = decodeURIComponent(absoluteSrc);
-      
-    }
+    src = constructLocalUrl(src, localBrightspaceUrl);
+    src = replaceContentEnforcedPath(src, localBrightspaceUrl);
+    src = removeUrlParameters(src);
+    src = resolveAbsolutePath(src, directoryPath);
 
     try {
       const base64Data = await urlToBase64(src, localBrightspaceUrl);
@@ -54,6 +73,7 @@ if (src.startsWith(localBrightspaceUrl + "/content/enforced/")) {
       console.error(`Error converting image to base64: ${src}`, err);
     }
   }
+
   return $.html();
 };
 

@@ -1,6 +1,7 @@
 const debug = process.env.debug_mode || false;
 const fs = require("fs");
 const htmlDocx = require("html-docx-js");
+const {JSDOM}=require("jsdom");
 const xml2js = require("xml2js");
 const cheerio = require("cheerio");
 const he = require("he");
@@ -10,8 +11,6 @@ const path = require("path");
 const AdmZip = require("adm-zip");
 const os = require("os");
 const rimraf = require("rimraf");
-const readline = require("readline");
-let language = "en";
 let titleElement = "BrightspaceToDocx";
 const express = require("express");
 const session = require('express-session');
@@ -31,7 +30,7 @@ const processZipFile = async (zipFilePath, res, tempDir, req) => {
   zip.extractAllTo(tempDir, true);
   const imsManifestPath = path.join(tempDir, "imsmanifest.xml");
   await processImsManifest(imsManifestPath, res, tempDir, req);
-  
+
 
   rimraf.sync(tempDir); // Delete temporary folder
 };
@@ -59,7 +58,8 @@ const processHtmlFiles = async (
   quizHtmlContentMap,
   fileType,
   res,
-  tempDir
+  tempDir,
+  req
 ) => {
   let combinedHtmlContent = "";
   let firstHeadTag = "";
@@ -95,38 +95,47 @@ const processHtmlFiles = async (
     }
     combinedHtmlContent += `${titleWithDescription}${bodyContent}\n`;
   }
-const processSvgElement = async (element, $) => {
-  const svgString = $.html(element);
-  return svgStringToPngBuffer(svgString)
-    .then((buffer) => {
-      if (buffer && buffer.length > 0) {
-        const pngBase64DataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
-        element.replaceWith(`<img src="${pngBase64DataUrl}"/>`);
-      } else {
-        console.error("Buffer is empty. SVG conversion failed.");
-      }
-    })
-    .catch((err) => {
-      console.error("Error processing SVG element:", err);
-    });
-};
+  const processSvgElement = async (element, $) => {
+    const svgString = $.html(element);
+    return svgStringToPngBuffer(svgString)
+      .then((buffer) => {
+        if (buffer && buffer.length > 0) {
+          const pngBase64DataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
+          element.replaceWith(`<img src="${pngBase64DataUrl}"/>`);
+        } else {
+          console.error("Buffer is empty. SVG conversion failed.");
+        }
+      })
+      .catch((err) => {
+        console.error("Error processing SVG element:", err);
+      });
+  };
 
   const processSvgImage = async (url, element, tempDir) => {
     return urlToBase64(url, localBrightspaceUrl, tempDir)
       .then((base64DataUrl) => {
-        if (base64DataUrl.startsWith("data:image/svg+xml;base64,")) {
-          return sharp(Buffer.from(base64DataUrl.split(",")[1], "base64"))
-            .png()
-            .toBuffer();
-        } else {
-          throw new Error(`Invalid data URL: ${base64DataUrl}`);
+        if (!base64DataUrl || !base64DataUrl.startsWith("data:image/svg+xml;base64,")) {
+          // Log the error or handle it as needed, then return to skip this file
+          console.error(`Invalid or empty data URL: ${base64DataUrl}`);
+          return;
         }
+
+        return sharp(Buffer.from(base64DataUrl.split(",")[1], "base64"))
+          .png()
+          .toBuffer();
       })
       .then((buffer) => {
-        const pngBase64DataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
-        element.attr("src", pngBase64DataUrl);
+        if (buffer) {
+          const pngBase64DataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
+          element.attr("src", pngBase64DataUrl);
+        }
+      })
+      .catch((err) => {
+        // Log the error without stopping the program
+        console.error(`Error processing SVG image: ${url}`, err);
       });
   };
+
 
   const processOtherImages = async (url, element, tempDir) => {
     return urlToBase64(url, localBrightspaceUrl, tempDir)
@@ -136,7 +145,7 @@ const processSvgElement = async (element, $) => {
   };
 
   const processImagesAndSvgs = async (combinedHtmlContent, tempDir) => {
-    
+
     const $ = cheerio.load(combinedHtmlContent);
     const imagesAndSvgs = $("img, svg");
     const imagePromises = [];
@@ -147,7 +156,7 @@ const processSvgElement = async (element, $) => {
       const url = element.attr("src");
 
       if (isSvgElement) {
-        imagePromises.push(processSvgElement(element, $,tempDir));
+        imagePromises.push(processSvgElement(element, $, tempDir));
       } else if (url && url.toLowerCase().endsWith(".svg")) {
         imagePromises.push(processSvgImage(url, element, tempDir));
       } else if (url && url.startsWith("data:")) {
@@ -165,7 +174,7 @@ const processSvgElement = async (element, $) => {
 
   const resultHtml = `
   <!DOCTYPE html>
-  <html lang="${language}">
+  <html lang="${req.session.language}">
   <head>
     <meta charset="UTF-8">
     ${headReplace}
@@ -185,7 +194,33 @@ const processSvgElement = async (element, $) => {
     );
     res.send(resultHtml);
   } else {
-    const docx = htmlDocx.asBlob(resultHtml);
+
+      // const docx = htmlDocx.asBlob(resultHtml);
+    // const dom = new JSDOM(resultHtml);
+    const dom = new JSDOM(resultHtml);
+    const document = dom.window.document;
+    const titleElements = document.querySelectorAll('title');
+
+    titleElements.forEach((titleElement) => {
+      // Create the new element you want to insert
+      const pageBreakDiv = document.createElement('div');
+      pageBreakDiv.className = 'page-break';
+      pageBreakDiv.style = 'page-break-after: always;';
+
+      // Insert the new element right before the <title> element
+      titleElement.parentNode.insertBefore(pageBreakDiv, titleElement);
+    });
+
+    const scriptElements = document.querySelectorAll('style');
+    scriptElements.forEach((scriptElement) => {
+      scriptElement.parentNode.removeChild(scriptElement);
+    });
+
+    // const cleanedHtml = document.documentElement.outerHTML;
+    const cleanedHtml = dom.serialize()
+    console.log("Size of html: ",cleanedHtml.length);
+    
+    const docx = htmlDocx.asBlob(cleanedHtml);
     const buffer = Buffer.from(await docx.arrayBuffer());
     res.setHeader(
       "Content-Type",
@@ -301,8 +336,8 @@ const processImsManifest = async (imsManifestPath, res, tempDir, req) => {
       titleToResourceMap[title] = identifier;
       const quizFilePath = path.join(tempDir, href);
       if (debug) console.log("982 Parsing quiz file: " + quizFilePath);
-      const quizData = await parseQuizXmlFile(quizFilePath);
-      const quizHtmlContent = formatQuizDataAsHtml(quizData, title,req);
+      const quizData = await parseQuizXmlFile(quizFilePath, tempDir);
+      const quizHtmlContent = formatQuizDataAsHtml(quizData, title, req);
       quizHtmlContentMap[title] = quizHtmlContent;
 
       // } else {
@@ -325,15 +360,15 @@ const processImsManifest = async (imsManifestPath, res, tempDir, req) => {
     const resourceData = resourceMap[identifier];
     if (resourceData.isQuizResource) {
       const quizFilePath = path.join(tempDir, resourceData.href);
-      const quizData = await parseQuizXmlFile(quizFilePath);
-      const quizHtmlContent = formatQuizDataAsHtml(quizData, title,req);
+      const quizData = await parseQuizXmlFile(quizFilePath, tempDir);
+      const quizHtmlContent = formatQuizDataAsHtml(quizData, title, req);
       quizHtmlContentMap[title] = quizHtmlContent;
     }
   }
 
   const titleElement =
     metadata["imsmd:title"]?.[0]?.["imsmd:langstring"]?.[0]._;
-  language = metadata["imsmd:language"];
+  req.session.language = metadata["imsmd:language"][0];
   const sanitizedTitle = sanitizeFilename(titleElement);
   if (debug) console.log("1016 Title: " + sanitizedTitle);
   const docxFileName = `${sanitizedTitle}.docx`;
@@ -344,7 +379,8 @@ const processImsManifest = async (imsManifestPath, res, tempDir, req) => {
     quizHtmlContentMap,
     fileType,
     res,
-    tempDir
+    tempDir,
+    req
   );
 };
 let fileType;
@@ -352,7 +388,7 @@ app.use(express.static("public"));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-  secret:'BrightSpace2Docx',
+  secret: 'BrightSpace2Docx',
   resave: false,
   saveUninitialized: true,
   cookie: { secure: true } // Use 'secure: true' if you are using HTTPS
@@ -361,6 +397,7 @@ app.post("/upload", upload.single("file"), (req, res) => {
   zipFilePath = req.file.path;
   fileType = req.body.fileType;
   req.session.extractQuizAnswers = req.body.extractQuizAnswers;
+  req.session.language = "en-ca";
   if (zipFilePath) {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "bs2docx-"));
     processZipFile(zipFilePath, res, tempDir, req).catch((err) => {

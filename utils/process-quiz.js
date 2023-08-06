@@ -1,7 +1,7 @@
 const debug = process.env.debug_mode || false;
-let language = "en";
 const fs = require("fs");
 const xml2js = require("xml2js");
+const path = require("path");
 const parseItems = (itemList, itemResourceMap, resourceMap) => {
   itemList.forEach((item) => {
     if (!item || !item.$ || !item.title) {
@@ -27,7 +27,75 @@ const parseItems = (itemList, itemResourceMap, resourceMap) => {
   });
 };
 
-async function parseQuizXml(xmlString) {
+async function parseQuizXml(xmlString, tempDir) {
+  const findItemByLabel = ((tempDir) => {
+  let cacheKey = null;
+  let itemsCache = null;
+
+  const processItems = (items, map) => {
+    // Ensure 'items' is an array (even if it's only one item)
+    const itemsArray = Array.isArray(items) ? items : [items];
+
+    // Add each item to the map
+    itemsArray.forEach((item) => map.set(item.$.label, item));
+  };
+
+  const processSection = (section, map) => {
+    // Navigate to 'item' array in current section
+    const items = section.item ? processItems(section.item, map) : null;
+
+    // If current section contains nested sections, process those too
+    const nestedSections = section.section
+      ? Array.isArray(section.section)
+        ? section.section
+        : [section.section]
+      : [];
+
+    // Now it's safe to iterate over nestedSections
+    for (const nestedSection of nestedSections) {
+      processSection(nestedSection, map);
+    }
+  };
+
+  return async (filePath, label) => {
+    // Check if the cacheKey matches the current filePath
+    if (cacheKey !== filePath) {
+      cacheKey = filePath;
+      itemsCache = new Map();
+
+      // Read and parse XML file
+      const quizDBFilePath = path.join(tempDir, filePath);
+      const xml = await readFile(quizDBFilePath);
+
+      const result = await xml2js.parseStringPromise(xml, {
+        explicitArray: false,
+        tagNameProcessors: [xml2js.processors.stripPrefix],
+      });
+
+      // Get objectbank
+      const objectbank = result.questestinterop.objectbank;
+
+      // Process items directly under 'objectbank', if they exist
+      if (objectbank.item) {
+        processItems(objectbank.item, itemsCache);
+      }
+
+      // Make sure 'section' is an array (even if it's only one section)
+      const sections = objectbank.section
+        ? Array.isArray(objectbank.section)
+          ? objectbank.section
+          : [objectbank.section]
+        : undefined;
+
+      // Process each section, adding items to the map
+      sections &&
+        sections.forEach((section) => processSection(section, itemsCache));
+    }
+
+    // Find the object where the '$.label' property matches the provided label
+    return itemsCache.get(label);
+  };
+})(tempDir);
   let parsedData;
   let quizData = [];
   let items = [];
@@ -163,40 +231,49 @@ async function parseQuizXml(xmlString) {
       const isShortAnswer = qmdQuestionTypeValue === "Short Answer";
       if (debug) console.log("521 Question Type: ", qmdQuestionTypeValue);
 
-      if (isMultipleChoice) {
-        if (!item.presentation || !item.presentation?.flow) {
-          return;
-        }
+if (isMultipleChoice) {
+  if (!item.presentation || !item.presentation.flow || !item.presentation.flow.material || !item.presentation.flow.material.mattext) {
+    return;
+  }
 
-        const questionText = item.presentation.flow.material.mattext._;
+  const questionText = item.presentation.flow.material.mattext._;
 
-        const answerOptions =
-          item.presentation.flow.response_lid.render_choice.flow_label;
+  if (!item.presentation.flow.response_lid || !item.presentation.flow.response_lid.render_choice || !item.presentation.flow.response_lid.render_choice.flow_label) {
+    return;
+  }
 
-        const answerChoices = answerOptions.map(
-          (answerOption) =>
-            answerOption.response_label.flow_mat.material.mattext._
-        );
+  const answerOptions =
+    item.presentation.flow.response_lid.render_choice.flow_label;
 
-        const feedbacks = item.itemfeedback.map(
-          (feedback) => feedback.material.mattext._
-        );
+  const answerChoices = answerOptions.map(
+    (answerOption) => answerOption?.response_label?.flow_mat?.material?.mattext?._
+  );
 
-        const correctAnswerIdent = item.resprocessing.respcondition.find(
-          (condition) => parseFloat(condition.setvar._)
-        ).conditionvar.varequal._;
-        const correctAnswerIndex = answerOptions.findIndex(
-          (answerOption) =>
-            answerOption.response_label.$.ident === correctAnswerIdent
-        );
-        const correctAnswer = String.fromCharCode(65 + correctAnswerIndex);
+  const feedbacks = item.itemfeedback?.map(
+    (feedback) => feedback.material?.mattext?._
+  );
 
-        quizData.push({
-          question: questionText,
-          answerChoices: answerChoices,
-          correctAnswer: correctAnswer,
-          feedbacks: feedbacks,
-        });
+  const correctAnswerIdent = item.resprocessing?.respcondition?.find(
+    (condition) => parseFloat(condition.setvar?._)
+  )?.conditionvar?.varequal?._;
+
+  if (correctAnswerIdent === undefined) {
+    return; // Handle error or add a default value
+  }
+
+  const correctAnswerIndex = answerOptions.findIndex(
+    (answerOption) =>
+      answerOption?.response_label?.$?.ident === correctAnswerIdent
+  );
+
+  const correctAnswer = String.fromCharCode(65 + correctAnswerIndex);
+
+  quizData.push({
+    question: questionText,
+    answerChoices: answerChoices,
+    correctAnswer: correctAnswer,
+    feedbacks: feedbacks,
+  });
       } else if (isMultiSelect) {
         const questionText = item.presentation.flow.material.mattext._;
         const answerOptions =
@@ -279,37 +356,44 @@ async function parseQuizXml(xmlString) {
           correctAnswer: correctAnswers,
         });
       } else if (isTrueFalse) {
-        if (!item.presentation || !item.presentation?.flow) {
-          return;
-        }
+  if (!item.presentation || !item.presentation.flow || !item.presentation.flow.material || !item.presentation.flow.material.mattext) {
+    return;
+  }
 
-        const questionText = item.presentation.flow.material.mattext._;
+  const questionText = item.presentation.flow.material.mattext._;
 
-        const answerOptions =
-          item.presentation.flow.response_lid.render_choice.flow_label;
+  if (!item.presentation.flow.response_lid || !item.presentation.flow.response_lid.render_choice || !item.presentation.flow.response_lid.render_choice.flow_label) {
+    return;
+  }
 
-        const answerChoices = answerOptions.map(
-          (answerOption) =>
-            answerOption.response_label.flow_mat.material.mattext._
-        );
+  const answerOptions =
+    item.presentation.flow.response_lid.render_choice.flow_label;
 
-        const correctAnswerIdent = item.resprocessing.respcondition.find(
-          (condition) => parseFloat(condition.setvar._) === 100
-        ).conditionvar.varequal._;
+  const answerChoices = answerOptions.map(
+    (answerOption) => answerOption?.response_label?.flow_mat?.material?.mattext?._
+  );
 
-        const correctAnswerIndex = answerOptions.findIndex(
-          (answerOption) =>
-            answerOption.response_label.$.ident === correctAnswerIdent
-        );
+  const correctAnswerIdent = item.resprocessing?.respcondition?.find(
+    (condition) => parseFloat(condition.setvar?._) === 100
+  )?.conditionvar?.varequal?._;
 
-        const correctAnswer = answerChoices[correctAnswerIndex];
+  if (correctAnswerIdent === undefined) {
+    return; // Handle error or add a default value
+  }
 
-        quizData.push({
-          questionType: "True/False",
-          question: questionText,
-          answerChoices: answerChoices,
-          correctAnswer: correctAnswer,
-        });
+  const correctAnswerIndex = answerOptions.findIndex(
+    (answerOption) =>
+      answerOption?.response_label?.$?.ident === correctAnswerIdent
+  );
+
+  const correctAnswer = answerChoices[correctAnswerIndex];
+
+  quizData.push({
+    questionType: "True/False",
+    question: questionText,
+    answerChoices: answerChoices,
+    correctAnswer: correctAnswer,
+  });
       } else if (isMatching) {
         const parseConditions = (respConditions) => {
           return respConditions.map((condition) => {
@@ -397,74 +481,6 @@ async function parseQuizXml(xmlString) {
   return quizData;
 }
 
-const findItemByLabel = (() => {
-  let cacheKey = null;
-  let itemsCache = null;
-
-  const processItems = (items, map) => {
-    // Ensure 'items' is an array (even if it's only one item)
-    const itemsArray = Array.isArray(items) ? items : [items];
-
-    // Add each item to the map
-    itemsArray.forEach((item) => map.set(item.$.label, item));
-  };
-
-  const processSection = (section, map) => {
-    // Navigate to 'item' array in current section
-    const items = section.item ? processItems(section.item, map) : null;
-
-    // If current section contains nested sections, process those too
-    const nestedSections = section.section
-      ? Array.isArray(section.section)
-        ? section.section
-        : [section.section]
-      : [];
-
-    // Now it's safe to iterate over nestedSections
-    for (const nestedSection of nestedSections) {
-      processSection(nestedSection, map);
-    }
-  };
-
-  return async (filePath, label) => {
-    // Check if the cacheKey matches the current filePath
-    if (cacheKey !== filePath) {
-      cacheKey = filePath;
-      itemsCache = new Map();
-
-      // Read and parse XML file
-      const quizDBFilePath = path.join(tempDir, filePath);
-      const xml = await readFile(quizDBFilePath);
-
-      const result = await xml2js.parseStringPromise(xml, {
-        explicitArray: false,
-        tagNameProcessors: [xml2js.processors.stripPrefix],
-      });
-
-      // Get objectbank
-      const objectbank = result.questestinterop.objectbank;
-
-      // Process items directly under 'objectbank', if they exist
-      if (objectbank.item) {
-        processItems(objectbank.item, itemsCache);
-      }
-
-      // Make sure 'section' is an array (even if it's only one section)
-      const sections = objectbank.section
-        ? Array.isArray(objectbank.section)
-          ? objectbank.section
-          : [objectbank.section]
-        : undefined;
-
-      // Process each section, adding items to the map
-      sections &&
-        sections.forEach((section) => processSection(section, itemsCache));
-    }
-
-    // Find the object where the '$.label' property matches the provided label
-    return itemsCache.get(label);
-  };
-})();
 
 function isCorrectChoice(correctAnswerData, groupIdent, choiceIdent) {
   return correctAnswerData.some((cond) => {
@@ -478,8 +494,8 @@ function isCorrectChoice(correctAnswerData, groupIdent, choiceIdent) {
 }
 
 const formatQuizDataAsHtml = (quizData, title, req) => {
+  const language=req.session.language;
   const extractQuizAnswers = req.session.extractQuizAnswers;
-  console.log(extractQuizAnswers);
   let quizHtml = `<h1>${title}</h1> <ol>`;
   if (!quizData) return "<h1>Missing quiz data</h1>";
   quizData.forEach((quizItem) => {
@@ -530,10 +546,10 @@ const formatQuizDataAsHtml = (quizData, title, req) => {
   return quizHtml;
 };
 
-const parseQuizXmlFile = async (quizFilePath) => {
+const parseQuizXmlFile = async (quizFilePath, tempDir) => {
   // console.log("Parsing quiz file: " + quizFilePath);
   const quizContent = await readFile(quizFilePath);
-  const quizData = await parseQuizXml(quizContent);
+  const quizData = await parseQuizXml(quizContent, tempDir);
   return quizData;
 };
 
@@ -553,7 +569,6 @@ const readFile = (path) => {
 module.exports = {
   parseItems,
   parseQuizXml,
-  findItemByLabel,
   isCorrectChoice,
   formatQuizDataAsHtml,
   parseQuizXmlFile,
