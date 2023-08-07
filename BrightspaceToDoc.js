@@ -1,7 +1,6 @@
 const debug = process.env.debug_mode || false;
 const fs = require("fs");
 const htmlDocx = require("html-docx-js");
-const {JSDOM}=require("jsdom");
 const xml2js = require("xml2js");
 const cheerio = require("cheerio");
 const he = require("he");
@@ -17,7 +16,22 @@ const session = require('express-session');
 const app = express();
 const port = process.env.PORT || 3000;
 const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const timestamp = Date.now();
+    const originalName = file.originalname;
+    const extension = path.extname(originalName);
+    const nameWithoutExtension = path.basename(originalName, extension);
+    const newName = `${nameWithoutExtension}-${timestamp}${extension}`;
+    cb(null, newName);
+  }
+});
+
+const upload = multer({ storage: storage });
 let localBrightspaceUrl = process.env.bsurl || "https://app.csps-efpc.gc.ca";
 const { embedImages, urlToBase64, svgStringToPngBuffer } = require('./utils/process-images');
 const { parseItems,
@@ -195,33 +209,35 @@ const processHtmlFiles = async (
     res.send(resultHtml);
   } else {
 
-      // const docx = htmlDocx.asBlob(resultHtml);
-    // const dom = new JSDOM(resultHtml);
-    const dom = new JSDOM(resultHtml);
-    const document = dom.window.document;
-    const titleElements = document.querySelectorAll('title');
+    const $ = cheerio.load(resultHtml);
 
-    titleElements.forEach((titleElement) => {
-      // Create the new element you want to insert
-      const pageBreakDiv = document.createElement('div');
-      pageBreakDiv.className = 'page-break';
-      pageBreakDiv.style = 'page-break-after: always;';
+    // Create the new element you want to append
+    const pageBreakDiv = '<div class="page-break" style="page-break-after: always;"></div>';
 
-      // Insert the new element right before the <title> element
-      titleElement.parentNode.insertBefore(pageBreakDiv, titleElement);
+    // Append the new element as the first child inside each <body> element
+    $('title').each((index, bodyElement) => {
+      $(bodyElement).prepend(pageBreakDiv);
     });
 
-    const scriptElements = document.querySelectorAll('style');
-    scriptElements.forEach((scriptElement) => {
-      scriptElement.parentNode.removeChild(scriptElement);
+    // Find and remove nested <body> tags, but keep their content
+    $('body body').each((index, nestedBody) => {
+      $(nestedBody).replaceWith($(nestedBody).html());
     });
 
-    // const cleanedHtml = document.documentElement.outerHTML;
-    const cleanedHtml = dom.serialize()
-    console.log("Size of html: ",cleanedHtml.length);
-    
+    // Move content of each <head> inside <body> to the first <head> element
+    $('body head').each((index, nestedHead) => {
+      const nestedHeadContent = $(nestedHead).html();
+      $('head').first().append(nestedHeadContent);
+      $(nestedHead).remove(); // Remove the nested head tag
+    });
+
+    const cleanedHtml = $.html();
+
+    console.log("Size of html: ", cleanedHtml.length);
+
     const docx = htmlDocx.asBlob(cleanedHtml);
     const buffer = Buffer.from(await docx.arrayBuffer());
+    
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
