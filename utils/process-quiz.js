@@ -282,10 +282,22 @@ async function parseQuizXml(xmlString, tempDir) {
     (answerOption) => answerOption.response_label.flow_mat.material.mattext._
   );
 
-  // Extract correct answer identifiers based on 'setvar' action of "Add" and varname of 'D2L_Correct'
-  const correctAnswerIdents = item.resprocessing.respcondition
-    .filter((condition) => condition.setvar.$.action === "Add" && condition.setvar.$.varname === "D2L_Correct")
-    .map((condition) => condition.conditionvar.varequal._);
+  let correctAnswerIdents = [];
+
+  // Check for the correct answer identifiers using the first structure
+  const correctRespCondition = item.resprocessing.respcondition.find(
+    (condition) => condition.$?.title === "Scoring for the correct answers"
+  );
+  if (correctRespCondition) {
+    correctAnswerIdents = correctRespCondition.conditionvar.varequal.map((varequal) => varequal._);
+  }
+
+  // Check for the correct answer identifiers using the second structure
+  if (correctAnswerIdents.length === 0) {
+    correctAnswerIdents = item.resprocessing.respcondition
+      .filter((condition) => condition.setvar.$.action === "Add" && condition.setvar.$.varname === "D2L_Correct")
+      .map((condition) => condition.conditionvar.varequal._);
+  }
 
   // Map response_label objects
   const responseLabels = answerOptions.map((flow_label) => flow_label.response_label.$.ident);
@@ -304,6 +316,7 @@ async function parseQuizXml(xmlString, tempDir) {
     correctAnswer: correctAnswers.join(", "),
   });
 }
+
  else if (isOrdering) {
       const question = item.presentation.flow.material.mattext._;
 
@@ -315,7 +328,7 @@ async function parseQuizXml(xmlString, tempDir) {
         );
       // Extract correct answers based on the 'setvar' value of 1
       const correctAnswerIndices = item.resprocessing.respcondition
-        .filter((condition) => condition.setvar._ === "1")
+        .filter((condition) => condition.setvar._)
         .flatMap((condition) => {
           if (condition.conditionvar.varequal) {
             return condition.conditionvar.varequal._;

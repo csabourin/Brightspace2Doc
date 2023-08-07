@@ -1,8 +1,25 @@
 const sharp = require("sharp");
-const { optimize } = require("svgo");
 const path = require("path");
 const fs = require("fs");
 const mime = require("mime");
+
+const findFileInDir = (dir, filename) => {
+  const files = fs.readdirSync(dir);
+
+  for (const file of files) {
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
+
+    if (stat.isDirectory()) {
+      const found = findFileInDir(filePath, filename);
+      if (found) return found;
+    } else if (path.basename(file) === filename) {
+      return filePath;
+    }
+  }
+
+  return null;
+};
 
 const constructLocalUrl = (src, localBrightspaceUrl) => {
   if (
@@ -37,11 +54,11 @@ const resolveAbsolutePath = (src, directoryPath) => {
   if (src.startsWith("http://") || src.startsWith("https://")) {
     return src; // Already an absolute URL
   }
-  
+
   if (src.startsWith("../")) {
     src = src.substring(3);
   }
-  
+
   const absoluteSrc = path.resolve(directoryPath, src);
   return decodeURIComponent(absoluteSrc);
 };
@@ -81,8 +98,7 @@ const urlToBase64 = async (url, localBrightspaceUrl, tempDir) => {
   // Check if the URL starts with "/shared/LCS_HTML_Templates/" and prepend the domain
   if (
     url.startsWith("/shared/LCS_HTML_Templates/") ||
-    url.startsWith(`/d2l/common/`) )
-  {
+    url.startsWith(`/d2l/common/`)) {
     url = localBrightspaceUrl + url;
   }
 
@@ -139,16 +155,48 @@ const urlToBase64 = async (url, localBrightspaceUrl, tempDir) => {
     url = url.replace('.//', '/');
     const decodedUrl = decodeURI(url); // Decode the URL in case it contains spaces or other special characters
     const absoluteSrc = decodedUrl.startsWith(tempDir)
-  ? path.resolve(decodedUrl)
-  : path.resolve(tempDir, decodedUrl);
+      ? path.resolve(decodedUrl)
+      : path.resolve(tempDir, decodedUrl);
     const correctedPath = absoluteSrc.replace(/\\/g, "/");
 
     return new Promise((resolve, reject) => {
       fs.readFile(correctedPath, async (error, data) => {
         if (error) {
           if (error.code === "ENOENT") {
-            console.warn(`File not found, skipping: ${absoluteSrc}`);
-            resolve(""); // resolve with an empty string or a placeholder image data URL
+            console.warn(`File not found, trying tempDir: ${absoluteSrc}`);
+
+            // Try to read from tempDir
+            let tempPath ="";
+            if(tempDir && path.basename(correctedPath)){
+             tempPath = path.resolve(tempDir, path.basename(correctedPath));
+            } else
+            fs.readFile(tempPath, async (tempError, tempData) => {
+              if (tempError) {
+                console.warn(`File not found in tempDir either, skipping: ${tempPath}`);
+                resolve(""); // resolve with an empty string or a placeholder image data URL
+              } else {
+                // Process tempData as found in tempDir
+                const mimeType = mime.getType(tempPath);
+                const isSvg = tempPath.toLowerCase().endsWith(".svg");
+                if (isSvg) {
+                  const convertedData = await convertSvgToPng(tempData);
+                  if (convertedData === null) {
+                    console.warn(`Invalid SVG, skipping: ${tempPath}`);
+                    resolve("");
+                    return;
+                  }
+                  tempData = convertedData;
+                }
+
+                if (tempData !== null) {
+                  const base64 = tempData.toString("base64");
+                  const final = `data:${isSvg ? "image/png" : mimeType};base64,${base64}`;
+                  resolve(final);
+                } else {
+                  resolve("");
+                }
+              }
+            });
           } else {
             console.error(`Error converting image to base64: ${absoluteSrc}`);
             reject(error);
@@ -170,9 +218,8 @@ const urlToBase64 = async (url, localBrightspaceUrl, tempDir) => {
           // Only continue if the data is not null
           if (data !== null) {
             const base64 = data.toString("base64");
-            const final = `data:${
-              isSvg ? "image/png" : mimeType
-            };base64,${base64}`;
+            const final = `data:${isSvg ? "image/png" : mimeType
+              };base64,${base64}`;
             resolve(`${final}`);
           } else {
             resolve("");
