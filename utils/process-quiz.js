@@ -29,73 +29,73 @@ const parseItems = (itemList, itemResourceMap, resourceMap) => {
 
 async function parseQuizXml(xmlString, tempDir) {
   const findItemByLabel = ((tempDir) => {
-  let cacheKey = null;
-  let itemsCache = null;
+    let cacheKey = null;
+    let itemsCache = null;
 
-  const processItems = (items, map) => {
-    // Ensure 'items' is an array (even if it's only one item)
-    const itemsArray = Array.isArray(items) ? items : [items];
+    const processItems = (items, map) => {
+      // Ensure 'items' is an array (even if it's only one item)
+      const itemsArray = Array.isArray(items) ? items : [items];
 
-    // Add each item to the map
-    itemsArray.forEach((item) => map.set(item.$.label, item));
-  };
+      // Add each item to the map
+      itemsArray.forEach((item) => map.set(item.$.label, item));
+    };
 
-  const processSection = (section, map) => {
-    // Navigate to 'item' array in current section
-    const items = section.item ? processItems(section.item, map) : null;
+    const processSection = (section, map) => {
+      // Navigate to 'item' array in current section
+      const items = section.item ? processItems(section.item, map) : null;
 
-    // If current section contains nested sections, process those too
-    const nestedSections = section.section
-      ? Array.isArray(section.section)
-        ? section.section
-        : [section.section]
-      : [];
+      // If current section contains nested sections, process those too
+      const nestedSections = section.section
+        ? Array.isArray(section.section)
+          ? section.section
+          : [section.section]
+        : [];
 
-    // Now it's safe to iterate over nestedSections
-    for (const nestedSection of nestedSections) {
-      processSection(nestedSection, map);
-    }
-  };
+      // Now it's safe to iterate over nestedSections
+      for (const nestedSection of nestedSections) {
+        processSection(nestedSection, map);
+      }
+    };
 
-  return async (filePath, label) => {
-    // Check if the cacheKey matches the current filePath
-    if (cacheKey !== filePath) {
-      cacheKey = filePath;
-      itemsCache = new Map();
+    return async (filePath, label) => {
+      // Check if the cacheKey matches the current filePath
+      if (cacheKey !== filePath) {
+        cacheKey = filePath;
+        itemsCache = new Map();
 
-      // Read and parse XML file
-      const quizDBFilePath = path.join(tempDir, filePath);
-      const xml = await readFile(quizDBFilePath);
+        // Read and parse XML file
+        const quizDBFilePath = path.join(tempDir, filePath);
+        const xml = await readFile(quizDBFilePath);
 
-      const result = await xml2js.parseStringPromise(xml, {
-        explicitArray: false,
-        tagNameProcessors: [xml2js.processors.stripPrefix],
-      });
+        const result = await xml2js.parseStringPromise(xml, {
+          explicitArray: false,
+          tagNameProcessors: [xml2js.processors.stripPrefix],
+        });
 
-      // Get objectbank
-      const objectbank = result.questestinterop.objectbank;
+        // Get objectbank
+        const objectbank = result.questestinterop.objectbank;
 
-      // Process items directly under 'objectbank', if they exist
-      if (objectbank.item) {
-        processItems(objectbank.item, itemsCache);
+        // Process items directly under 'objectbank', if they exist
+        if (objectbank.item) {
+          processItems(objectbank.item, itemsCache);
+        }
+
+        // Make sure 'section' is an array (even if it's only one section)
+        const sections = objectbank.section
+          ? Array.isArray(objectbank.section)
+            ? objectbank.section
+            : [objectbank.section]
+          : undefined;
+
+        // Process each section, adding items to the map
+        sections &&
+          sections.forEach((section) => processSection(section, itemsCache));
       }
 
-      // Make sure 'section' is an array (even if it's only one section)
-      const sections = objectbank.section
-        ? Array.isArray(objectbank.section)
-          ? objectbank.section
-          : [objectbank.section]
-        : undefined;
-
-      // Process each section, adding items to the map
-      sections &&
-        sections.forEach((section) => processSection(section, itemsCache));
-    }
-
-    // Find the object where the '$.label' property matches the provided label
-    return itemsCache.get(label);
-  };
-})(tempDir);
+      // Find the object where the '$.label' property matches the provided label
+      return itemsCache.get(label);
+    };
+  })(tempDir);
   let parsedData;
   let quizData = [];
   let items = [];
@@ -229,256 +229,252 @@ async function parseQuizXml(xmlString, tempDir) {
       const isTrueFalse = qmdQuestionTypeValue === "True/False";
       const isMatching = qmdQuestionTypeValue === "Matching";
       const isShortAnswer = qmdQuestionTypeValue === "Short Answer";
+      const isLongAnswer = qmdQuestionTypeValue === "Long Answer";
       if (debug) console.log("521 Question Type: ", qmdQuestionTypeValue);
 
-if (isMultipleChoice) {
-  if (!item.presentation || !item.presentation.flow || !item.presentation.flow.material || !item.presentation.flow.material.mattext) {
-    return;
-  }
+      if (isMultipleChoice) {
+        if (!item.presentation || !item.presentation.flow || !item.presentation.flow.material || !item.presentation.flow.material.mattext) {
+          return;
+        }
 
-  const questionText = item.presentation.flow.material.mattext._;
-
-  if (!item.presentation.flow.response_lid || !item.presentation.flow.response_lid.render_choice || !item.presentation.flow.response_lid.render_choice.flow_label) {
-    return;
-  }
-
-  const answerOptions =
-    item.presentation.flow.response_lid.render_choice.flow_label;
-
-  const answerChoices = answerOptions.map(
-    (answerOption) => answerOption?.response_label?.flow_mat?.material?.mattext?._
-  );
-
-  const feedbacks = item.itemfeedback?.map(
-    (feedback) => feedback.material?.mattext?._
-  );
-
-  const correctAnswerIdent = item.resprocessing?.respcondition?.find(
-    (condition) => parseFloat(condition.setvar?._)
-  )?.conditionvar?.varequal?._;
-
-  if (correctAnswerIdent === undefined) {
-    return; // Handle error or add a default value
-  }
-
-  const correctAnswerIndex = answerOptions.findIndex(
-    (answerOption) =>
-      answerOption?.response_label?.$?.ident === correctAnswerIdent
-  );
-
-  const correctAnswer = String.fromCharCode(65 + correctAnswerIndex);
-
-  quizData.push({
-    question: questionText,
-    answerChoices: answerChoices,
-    correctAnswer: correctAnswer,
-    feedbacks: feedbacks,
-  });
-      } else if (isMultiSelect) {
         const questionText = item.presentation.flow.material.mattext._;
+
+        if (!item.presentation.flow.response_lid || !item.presentation.flow.response_lid.render_choice || !item.presentation.flow.response_lid.render_choice.flow_label) {
+          return;
+        }
+
         const answerOptions =
           item.presentation.flow.response_lid.render_choice.flow_label;
+
         const answerChoices = answerOptions.map(
-          (answerOption) =>
-            answerOption.response_label.flow_mat.material.mattext._
+          (answerOption) => answerOption?.response_label?.flow_mat?.material?.mattext?._
         );
 
-        // Extract correct answers based on the 'setvar' value of 1
-        const correctAnswerIdents = item.resprocessing.respcondition
-          .filter((condition) => condition.setvar._ === "1")
-          .flatMap((condition) => {
-            if (condition.conditionvar.varequal) {
-              return condition.conditionvar.varequal;
-            }
-            return [];
-          });
+        const feedbacks = item.itemfeedback?.map(
+          (feedback) => feedback.material?.mattext?._
+        );
 
-        // Extract response_label objects
-        const responseLabels =
-          item.presentation.flow.response_lid.render_choice.flow_label.map(
-            (flow_label) => flow_label.response_label
-          );
+        const correctAnswerIdent = item.resprocessing?.respcondition?.find(
+          (condition) => parseFloat(condition.setvar?._)
+        )?.conditionvar?.varequal?._;
 
-        // Save the correct answers as an array of uppercase letters
-        const correctAnswers = correctAnswerIdents.map((ident) => {
-          const responseLabel = responseLabels.find(
-            (label) => label.$.ident === ident._
-          );
-          const answerIndex = responseLabels.indexOf(responseLabel);
-          const letter = String.fromCharCode(65 + answerIndex); // Convert the index to an uppercase letter
-          return letter;
-        });
+        if (correctAnswerIdent === undefined) {
+          return; // Handle error or add a default value
+        }
+
+        const correctAnswerIndex = answerOptions.findIndex(
+          (answerOption) =>
+            answerOption?.response_label?.$?.ident === correctAnswerIdent
+        );
+
+        const correctAnswer = String.fromCharCode(65 + correctAnswerIndex);
 
         quizData.push({
-          questionType: "Multi-Select",
           question: questionText,
           answerChoices: answerChoices,
-          correctAnswer: correctAnswers.join(", "),
+          correctAnswer: correctAnswer,
+          feedbacks: feedbacks,
         });
-      } else if (isOrdering) {
-        const question = item.presentation.flow.material.mattext._;
-
-        const choices =
-          item.presentation.flow.response_grp.render_choice.flow_label.response_label.map(
-            (choice) => {
-              return choice.flow_mat.material.mattext._;
-            }
-          );
-        // Extract correct answers based on the 'setvar' value of 1
-        const correctAnswerIndices = item.resprocessing.respcondition
-          .filter((condition) => condition.setvar._ === "1")
-          .flatMap((condition) => {
-            if (condition.conditionvar.varequal) {
-              return condition.conditionvar.varequal._;
-            } else if (
-              condition.conditionvar.not &&
-              condition.conditionvar.not.varequal
-            ) {
-              return [];
-            }
-            return [];
-          });
-
-        // Save the correct answers as an array of uppercase letters
-        const correctAnswers = correctAnswerIndices.map((index) => {
-          const letter = String.fromCharCode(
-            64 + parseInt(index.split("_").pop())
-          ); // Convert the index to an uppercase letter
-          return letter;
-        });
-
-        // console.log("Question:", question);
-        // console.log("Choices:", choices);
-        quizData.push({
-          questionType: "Ordering",
-          question: question,
-          answerChoices: choices,
-          correctAnswer: correctAnswers,
-        });
-      } else if (isTrueFalse) {
-  if (!item.presentation || !item.presentation.flow || !item.presentation.flow.material || !item.presentation.flow.material.mattext) {
-    return;
-  }
-
+      } else if (isMultiSelect) {
   const questionText = item.presentation.flow.material.mattext._;
-
-  if (!item.presentation.flow.response_lid || !item.presentation.flow.response_lid.render_choice || !item.presentation.flow.response_lid.render_choice.flow_label) {
-    return;
-  }
-
-  const answerOptions =
-    item.presentation.flow.response_lid.render_choice.flow_label;
-
+  const answerOptions = item.presentation.flow.response_lid.render_choice.flow_label;
   const answerChoices = answerOptions.map(
-    (answerOption) => answerOption?.response_label?.flow_mat?.material?.mattext?._
+    (answerOption) => answerOption.response_label.flow_mat.material.mattext._
   );
 
-  const correctAnswerIdent = item.resprocessing?.respcondition?.find(
-    (condition) => parseFloat(condition.setvar?._) === 100
-  )?.conditionvar?.varequal?._;
+  // Extract correct answer identifiers based on 'setvar' action of "Add" and varname of 'D2L_Correct'
+  const correctAnswerIdents = item.resprocessing.respcondition
+    .filter((condition) => condition.setvar.$.action === "Add" && condition.setvar.$.varname === "D2L_Correct")
+    .map((condition) => condition.conditionvar.varequal._);
 
-  if (correctAnswerIdent === undefined) {
-    return; // Handle error or add a default value
-  }
+  // Map response_label objects
+  const responseLabels = answerOptions.map((flow_label) => flow_label.response_label.$.ident);
 
-  const correctAnswerIndex = answerOptions.findIndex(
-    (answerOption) =>
-      answerOption?.response_label?.$?.ident === correctAnswerIdent
-  );
-
-  const correctAnswer = answerChoices[correctAnswerIndex];
+  // Save the correct answers as an array of uppercase letters
+  const correctAnswers = correctAnswerIdents.map((ident) => {
+    const answerIndex = responseLabels.indexOf(ident);
+    const letter = String.fromCharCode(65 + answerIndex); // Convert the index to an uppercase letter
+    return letter;
+  });
 
   quizData.push({
-    questionType: "True/False",
+    questionType: "Multi-Select",
     question: questionText,
     answerChoices: answerChoices,
-    correctAnswer: correctAnswer,
+    correctAnswer: correctAnswers.join(", "),
   });
-      } else if (isMatching) {
-        const parseConditions = (respConditions) => {
-          return respConditions.map((condition) => {
-            let conditionvar = condition.conditionvar;
-            let setvar = condition.setvar;
+}
+ else if (isOrdering) {
+      const question = item.presentation.flow.material.mattext._;
 
-            // Condition details
-            let responseIdentifier, match;
-            if (conditionvar.varequal) {
-              responseIdentifier = conditionvar.varequal.$.respident; // Switched
-              match = conditionvar.varequal._; // Switched
-            } else if (conditionvar.vargte) {
-              responseIdentifier = conditionvar.vargte.$.respident; // Switched
-              match = conditionvar.vargte._; // Switched
-            }
-
-            return {
-              condition: {
-                responseIdentifier,
-                match,
-              },
-              action: {
-                varName: setvar.$.varname,
-                actionType: setvar.$.action,
-                value: Number(setvar._),
-              },
-            };
-          });
-        };
-
-        // Parse the question
-        const question = item.presentation.flow.material.mattext._;
-
-        // Parse the answer choices
-        const answerChoices = item.presentation.flow.response_grp.map(
-          (responseGroup) => ({
-            label: responseGroup.material.mattext._,
-            options: responseGroup.render_choice.flow_label.response_label.map(
-              (label) => ({
-                text: label.flow_mat.material.mattext._,
-                ident: label.$.ident,
-              })
-            ),
-          })
+      const choices =
+        item.presentation.flow.response_grp.render_choice.flow_label.response_label.map(
+          (choice) => {
+            return choice.flow_mat.material.mattext._;
+          }
         );
-
-        // Parse the correct answer
-        const correctAnswerData = parseConditions(
-          item.resprocessing.respcondition
-        );
-
-        // Parse the feedback
-        const feedback = item.itemfeedback?.material.mattext._;
-
-        quizData.push({
-          questionType: "Matching",
-          question: question,
-          answerChoices: answerChoices,
-          correctAnswer: correctAnswerData,
-          feedbacks: feedback,
+      // Extract correct answers based on the 'setvar' value of 1
+      const correctAnswerIndices = item.resprocessing.respcondition
+        .filter((condition) => condition.setvar._ === "1")
+        .flatMap((condition) => {
+          if (condition.conditionvar.varequal) {
+            return condition.conditionvar.varequal._;
+          } else if (
+            condition.conditionvar.not &&
+            condition.conditionvar.not.varequal
+          ) {
+            return [];
+          }
+          return [];
         });
-      } else if (isShortAnswer) {
-        let question = item.presentation.flow.material.mattext._;
-        let answerChoices = item.resprocessing.respcondition.map(
-          (resp) => resp.conditionvar?.varequal?._
-        );
-        let feedback = item.itemfeedback.material.mattext._;
 
-        quizData.push({
-          questionType: "Short Answer",
-          question: question,
-          answerChoices: answerChoices,
-          feedbacks: feedback,
-        });
-      } else {
-        console.warn("Question type not supported:" + qmdQuestionTypeValue);
+      // Save the correct answers as an array of uppercase letters
+      const correctAnswers = correctAnswerIndices.map((index) => {
+        const letter = String.fromCharCode(
+          64 + parseInt(index.split("_").pop())
+        ); // Convert the index to an uppercase letter
+        return letter;
+      });
+
+      // console.log("Question:", question);
+      // console.log("Choices:", choices);
+      quizData.push({
+        questionType: "Ordering",
+        question: question,
+        answerChoices: choices,
+        correctAnswer: correctAnswers,
+      });
+    } else if (isTrueFalse) {
+      if (!item.presentation || !item.presentation.flow || !item.presentation.flow.material || !item.presentation.flow.material.mattext) {
         return;
       }
+
+      const questionText = item.presentation.flow.material.mattext._;
+
+      if (!item.presentation.flow.response_lid || !item.presentation.flow.response_lid.render_choice || !item.presentation.flow.response_lid.render_choice.flow_label) {
+        return;
+      }
+
+      const answerOptions =
+        item.presentation.flow.response_lid.render_choice.flow_label;
+
+      const answerChoices = answerOptions.map(
+        (answerOption) => answerOption?.response_label?.flow_mat?.material?.mattext?._
+      );
+
+      const correctAnswerIdent = item.resprocessing?.respcondition?.find(
+        (condition) => parseFloat(condition.setvar?._) === 100
+      )?.conditionvar?.varequal?._;
+
+      if (correctAnswerIdent === undefined) {
+        return; // Handle error or add a default value
+      }
+
+      const correctAnswerIndex = answerOptions.findIndex(
+        (answerOption) =>
+          answerOption?.response_label?.$?.ident === correctAnswerIdent
+      );
+
+      const correctAnswer = answerChoices[correctAnswerIndex];
+
+      quizData.push({
+        questionType: "True/False",
+        question: questionText,
+        answerChoices: answerChoices,
+        correctAnswer: correctAnswer,
+      });
+    } else if (isMatching) {
+      const parseConditions = (respConditions) => {
+        return respConditions.map((condition) => {
+          let conditionvar = condition.conditionvar;
+          let setvar = condition.setvar;
+
+          // Condition details
+          let responseIdentifier, match;
+          if (conditionvar.varequal) {
+            responseIdentifier = conditionvar.varequal.$.respident; // Switched
+            match = conditionvar.varequal._; // Switched
+          } else if (conditionvar.vargte) {
+            responseIdentifier = conditionvar.vargte.$.respident; // Switched
+            match = conditionvar.vargte._; // Switched
+          }
+
+          return {
+            condition: {
+              responseIdentifier,
+              match,
+            },
+            action: {
+              varName: setvar.$.varname,
+              actionType: setvar.$.action,
+              value: Number(setvar._),
+            },
+          };
+        });
+      };
+
+      // Parse the question
+      const question = item.presentation.flow.material.mattext._;
+
+      // Parse the answer choices
+      const answerChoices = item.presentation.flow.response_grp.map(
+        (responseGroup) => ({
+          label: responseGroup.material.mattext._,
+          options: responseGroup.render_choice.flow_label.response_label.map(
+            (label) => ({
+              text: label.flow_mat.material.mattext._,
+              ident: label.$.ident,
+            })
+          ),
+        })
+      );
+
+      // Parse the correct answer
+      const correctAnswerData = parseConditions(
+        item.resprocessing.respcondition
+      );
+
+      // Parse the feedback
+      const feedback = item.itemfeedback?.material.mattext._;
+
+      quizData.push({
+        questionType: "Matching",
+        question: question,
+        answerChoices: answerChoices,
+        correctAnswer: correctAnswerData,
+        feedbacks: feedback,
+      });
+    } else if (isShortAnswer) {
+      let question = item.presentation.flow.material.mattext._;
+      let answerChoices = item.resprocessing.respcondition.map(
+        (resp) => resp.conditionvar?.varequal?._
+      );
+      let feedback = item.itemfeedback.material.mattext._;
+
+      quizData.push({
+        questionType: "Short Answer",
+        question: question,
+        answerChoices: answerChoices,
+        feedbacks: feedback,
+      });
+    } else if (isLongAnswer) {
+      // Extract the question text
+      const questionText = item.presentation.flow.material.mattext._;
+      quizData.push({
+        questionType: "Long Answer",
+        question: questionText
+      });
     } else {
-      console.warn("Metadata fields not found for item index: " + index);
-      if (debug) console.log("No MD in", item);
+      console.warn("Question type not supported:" + qmdQuestionTypeValue);
+      return;
     }
+  } else {
+    console.warn("Metadata fields not found for item index: " + index);
+    if(debug) console.log("No MD in", item);
+  }
   });
 
-  return quizData;
+return quizData;
 }
 
 
@@ -494,7 +490,7 @@ function isCorrectChoice(correctAnswerData, groupIdent, choiceIdent) {
 }
 
 const formatQuizDataAsHtml = (quizData, title, req) => {
-  const language=req.session.language;
+  const language = req.session.language;
   const extractQuizAnswers = req.session.extractQuizAnswers;
   let quizHtml = `<h1>${title}</h1> <ol>`;
   if (!quizData) return "<h1>Missing quiz data</h1>";
@@ -504,6 +500,7 @@ const formatQuizDataAsHtml = (quizData, title, req) => {
     if (!question) return;
     if (questionType !== "Matching") {
       correctAnswer = correctAnswer ? correctAnswer : "N/A";
+      answerChoices = answerChoices ? answerChoices : [];
 
       quizHtml += `<li><div>${question}</div><ol type="A">`;
 
