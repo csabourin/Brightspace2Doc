@@ -284,20 +284,33 @@ async function parseQuizXml(xmlString, tempDir) {
 
   let correctAnswerIdents = [];
 
-  // Check for the correct answer identifiers using the first structure
-  const correctRespCondition = item.resprocessing.respcondition.find(
-    (condition) => condition.$?.title === "Scoring for the correct answers"
-  );
-  if (correctRespCondition) {
-    correctAnswerIdents = correctRespCondition.conditionvar.varequal.map((varequal) => varequal._);
-  }
+// Check for the correct answer identifiers using the first structure
+const correctRespCondition = item.resprocessing.respcondition.find(
+  (condition) => condition.$?.title === "Scoring for the correct answers"
+);
 
-  // Check for the correct answer identifiers using the second structure
-  if (correctAnswerIdents.length === 0) {
-    correctAnswerIdents = item.resprocessing.respcondition
-      .filter((condition) => condition.setvar.$.action === "Add" && condition.setvar.$.varname === "D2L_Correct")
-      .map((condition) => condition.conditionvar.varequal._);
+if (correctRespCondition) {
+  if (Array.isArray(correctRespCondition.conditionvar.varequal)) {
+    correctAnswerIdents = correctRespCondition.conditionvar.varequal.map((varequal) => varequal._);
+  } else {
+    correctAnswerIdents.push(correctRespCondition.conditionvar.varequal._);
   }
+}
+
+// Check for the correct answer identifiers using the second structure
+if (correctAnswerIdents.length === 0) {
+  const secondStructureConditions = item.resprocessing.respcondition.filter(
+    (condition) => condition.setvar?.$?.action === "Add" && condition.setvar?.$?.varname === "D2L_Correct"
+  );
+
+  for (const condition of secondStructureConditions) {
+    if (Array.isArray(condition.conditionvar.varequal)) {
+      correctAnswerIdents = correctAnswerIdents.concat(condition.conditionvar.varequal.map((varequal) => varequal._));
+    } else {
+      correctAnswerIdents.push(condition.conditionvar.varequal._);
+    }
+  }
+}
 
   // Map response_label objects
   const responseLabels = answerOptions.map((flow_label) => flow_label.response_label.$.ident);

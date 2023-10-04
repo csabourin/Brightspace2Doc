@@ -159,74 +159,80 @@ const urlToBase64 = async (url, localBrightspaceUrl, tempDir) => {
       : path.resolve(tempDir, decodedUrl);
     const correctedPath = absoluteSrc.replace(/\\/g, "/");
 
-    return new Promise((resolve, reject) => {
-      fs.readFile(correctedPath, async (error, data) => {
-        if (error) {
-          if (error.code === "ENOENT") {
-            console.warn(`File not found, trying tempDir: ${absoluteSrc}`);
+   return new Promise((resolve, reject) => {
+  fs.readFile(correctedPath, async (error, data) => {
+    if (error) {
+      if (error.code === "ENOENT") {
+        console.warn(`File not found, trying tempDir: ${absoluteSrc}`);
 
-            // Try to read from tempDir
-            let tempPath ="";
-            if(tempDir && path.basename(correctedPath)){
-             tempPath = path.resolve(tempDir, path.basename(correctedPath));
-            } else
-            fs.readFile(tempPath, async (tempError, tempData) => {
-              if (tempError) {
-                console.warn(`File not found in tempDir either, skipping: ${tempPath}`);
-                resolve(""); // resolve with an empty string or a placeholder image data URL
-              } else {
-                // Process tempData as found in tempDir
-                const mimeType = mime.getType(tempPath);
-                const isSvg = tempPath.toLowerCase().endsWith(".svg");
-                if (isSvg) {
-                  const convertedData = await convertSvgToPng(tempData);
-                  if (convertedData === null) {
-                    console.warn(`Invalid SVG, skipping: ${tempPath}`);
-                    resolve("");
-                    return;
-                  }
-                  tempData = convertedData;
-                }
-
-                if (tempData !== null) {
-                  const base64 = tempData.toString("base64");
-                  const final = `data:${isSvg ? "image/png" : mimeType};base64,${base64}`;
-                  resolve(final);
-                } else {
-                  resolve("");
-                }
-              }
-            });
-          } else {
-            console.error(`Error converting image to base64: ${absoluteSrc}`);
-            reject(error);
-          }
-        } else {
-          const mimeType = mime.getType(absoluteSrc);
-          const isSvg = absoluteSrc.toLowerCase().endsWith(".svg");
-
-          if (isSvg) {
-            const convertedData = await convertSvgToPng(data);
-            if (convertedData === null) {
-              console.warn(`Invalid SVG, skipping: ${absoluteSrc}`);
-              resolve(""); // resolve with an empty string when the SVG is invalid
-              return; // Exit the readFile callback
-            }
-            data = convertedData;
-          }
-
-          // Only continue if the data is not null
-          if (data !== null) {
-            const base64 = data.toString("base64");
-            const final = `data:${isSvg ? "image/png" : mimeType
-              };base64,${base64}`;
-            resolve(`${final}`);
-          } else {
-            resolve("");
-          }
+        // Try to read from tempDir
+        let tempPath = "";
+        if (tempDir && path.basename(correctedPath)) {
+          tempPath = path.resolve(tempDir, path.basename(correctedPath));
         }
-      });
-    });
+
+        if (tempPath) {
+          fs.readFile(tempPath, async (tempError, tempData) => {
+            if (tempError) {
+              console.warn(`File not found in tempDir either, skipping: ${tempPath}`);
+              resolve(""); // resolve with an empty string or a placeholder image data URL
+            } else {
+              // Process tempData as found in tempDir
+              const mimeType = mime.getType(tempPath);
+              const isSvg = tempPath.toLowerCase().endsWith(".svg");
+              if (isSvg) {
+                const convertedData = await convertSvgToPng(tempData);
+                if (convertedData === null) {
+                  console.warn(`Invalid SVG, skipping: ${tempPath}`);
+                  resolve("");
+                  return;
+                }
+                tempData = convertedData;
+              }
+
+              if (tempData !== null) {
+                const base64 = tempData.toString("base64");
+                const final = `data:${isSvg ? "image/png" : mimeType};base64,${base64}`;
+                resolve(final);
+              } else {
+                resolve("");
+              }
+            }
+          });
+        } else {
+          console.warn(`File not found in tempDir either, skipping: ${correctedPath}`);
+          resolve("");
+        }
+      } else {
+        console.error(`Error converting image to base64: ${absoluteSrc}`);
+        reject(error);
+      }
+    } else {
+      const mimeType = mime.getType(absoluteSrc);
+      const isSvg = absoluteSrc.toLowerCase().endsWith(".svg");
+
+      if (isSvg) {
+        const convertedData = await convertSvgToPng(data);
+        if (convertedData === null) {
+          console.warn(`Invalid SVG, skipping: ${absoluteSrc}`);
+          resolve(""); // resolve with an empty string when the SVG is invalid
+          return; // Exit the readFile callback
+        }
+        data = convertedData;
+      }
+
+      // Only continue if the data is not null
+      if (data !== null) {
+        const base64 = data.toString("base64");
+        const final = `data:${isSvg ? "image/png" : mimeType};base64,${base64}`;
+        resolve(`${final}`);
+      } else {
+        resolve("");
+      }
+    }
+  });
+});
+
   }
 };
 
