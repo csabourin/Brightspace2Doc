@@ -40,7 +40,7 @@ Drag/drop the zip package in the window and press enter.
 ### or
 
 ```
-node index.js <path-to-zip-file>
+node BrightspaceToDoc.js <path-to-zip-file>
 ```
 
 Replace `<path-to-zip-file>` with the path to the BrightSpace course export ZIP file you want to convert.
