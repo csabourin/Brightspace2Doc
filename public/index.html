@@ -232,7 +232,7 @@
         </ol>
       </div>
     </details>
-    <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+    <form id="upload-form" action="upload" method="post" enctype="multipart/form-data">
       <div class="file-upload-wrapper">
         <button type="button" class="file-upload-button">Select File</button>
         <input type="file" name="file" id="file-upload" accept=".zip" hidden />
@@ -281,7 +281,7 @@
 
         const formData = new FormData(event.target);
 
-        fetch("/upload", {
+        fetch("upload", {
           method: "POST",
           body: formData,
         })

@@ -15,6 +15,7 @@ const express = require("express");
 const session = require('express-session');
 const app = express();
 const port = process.env.PORT || 3000;
+const offset = process.env.BS2DOC_OFFSET || '/';
 const multer = require("multer");
 
 const storage = multer.diskStorage({
@@ -400,7 +401,7 @@ const processImsManifest = async (imsManifestPath, res, tempDir, req) => {
   );
 };
 let fileType;
-app.use(express.static("public"));
+app.use(offset, express.static("public"));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
@@ -409,7 +410,7 @@ app.use(session({
   saveUninitialized: true,
   cookie: { secure: true } // Use 'secure: true' if you are using HTTPS
 }));
-app.post("/upload", upload.single("file"), (req, res) => {
+app.post(offset + "upload", upload.single("file"), (req, res) => {
   zipFilePath = req.file.path;
   fileType = req.body.fileType;
   req.session.extractQuizAnswers = req.body.extractQuizAnswers;
